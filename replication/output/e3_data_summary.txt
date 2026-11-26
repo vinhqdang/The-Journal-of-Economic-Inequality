@@ -187,12 +187,14 @@ democratic_republic_of_congo 112 129  49 117  85
   pooled sizes per fold_spatial: [5179, 4492, 4001, 3092, 2905]
 
 Sanity check: ridge regression of wealth on f_* (standardised within training folds)
-  alpha = 10.0 (fixed, not tuned)
-  5-fold spatial CV (in-country blocks): pooled OOF R^2 = 0.119; mean per-fold R^2 = 0.189
-    per-fold R^2: [-1.255, 0.63, 0.623, 0.378, 0.567]
-  leave-one-country-out (out-of-country, extra): pooled OOF R^2 = -1.440; mean per-country R^2 = -0.902
+  alpha = 10.0 (fixed, not tuned); standardised features clipped to +/-5
+  5-fold spatial CV (in-country blocks): pooled OOF R^2 = 0.610; mean per-fold R^2 = 0.595
+    per-fold R^2: [0.562, 0.671, 0.631, 0.535, 0.574]
+  leave-one-country-out (out-of-country, extra): pooled OOF R^2 = 0.549; mean per-country R^2 = 0.482
+  without clipping: spatial pooled R^2 = 0.119; leave-one-country-out pooled R^2 = -1.440
+    (rare histogram bins are nearly constant in training and give extreme test z-scores)
   spatial CV pooled R^2 sensitivity to alpha (reported only, not used for selection):
-    alpha=1: 0.099
-    alpha=10: 0.119
-    alpha=100: 0.117
+    alpha=1: 0.603
+    alpha=10: 0.610
+    alpha=100: 0.618
 
