@@ -1,0 +1,135 @@
+%% ======================================================================
+%% Manuscript for The Journal of Economic Inequality (Springer)
+%% Springer Nature LaTeX template (sn-jnl), author-year referencing.
+%% Submission rule: upload all files from this folder flat (no subfolders).
+%% ======================================================================
+\documentclass[pdflatex,sn-mathphys-ay]{sn-jnl}% Author-year: (Atkinson 1970)
+%% For review copy with double spacing and line numbers use instead:
+%% \documentclass[pdflatex,referee,lineno,sn-mathphys-ay]{sn-jnl}
+
+\usepackage{graphicx}%
+\usepackage{multirow}%
+\usepackage{amsmath,amssymb,amsfonts}%
+\usepackage{amsthm}%
+\usepackage[title]{appendix}%
+\usepackage{xcolor}%
+\usepackage{textcomp}%
+\usepackage{manyfoot}%
+\usepackage{booktabs}%
+\usepackage{threeparttable}%
+
+\theoremstyle{thmstyleone}%
+\newtheorem{proposition}{Proposition}%
+\newtheorem{lemma}{Lemma}%
+\theoremstyle{thmstylethree}%
+\newtheorem{definition}{Definition}%
+
+\raggedbottom
+
+\begin{document}
+
+%% Title: concise and informative
+\title[Short running title]{Full Article Title}
+
+\author*[1]{\fnm{Quang-Vinh} \sur{Dang}}\email{vinh.dq4@buv.edu.vn}
+%% ORCID: 0000-0002-3877-8024 (also enter in the submission system)
+
+\affil*[1]{\orgname{British University Vietnam}, \orgaddress{\city{Hung Yen}, \country{Vietnam}}}
+
+%% Abstract: 150--250 words, no undefined abbreviations, no citations
+\abstract{Abstract text (150--250 words). State the question, the data, the
+inequality concept and measure used, the identification or decomposition
+strategy, the main quantitative findings, and the policy implication.}
+
+%% 4--6 keywords
+\keywords{Inequality, Keyword 2, Keyword 3, Keyword 4}
+
+%% JEL codes (https://www.aeaweb.org/jel/guide/)
+\pacs[JEL Classification]{D31, D63, I32}
+
+\maketitle
+
+%% Headings: decimal system, at most three levels
+\section{Introduction}\label{sec:intro}
+
+Motivation, research question, contribution relative to the literature,
+and a preview of results. Cite by name and year, e.g.\ inequality
+measurement builds on \citet{atkinson1970} and \citet{cowell2011}
+\citep[see also][]{shorrocks1980}.
+
+\section{Related literature}\label{sec:lit}
+
+\section{Measurement framework}\label{sec:framework}
+
+\begin{definition}[Gini coefficient]
+For incomes $y_1,\dots,y_n$ with mean $\mu$,
+\begin{equation}
+G = \frac{1}{2n^2\mu}\sum_{i=1}^{n}\sum_{j=1}^{n}\lvert y_i - y_j\rvert .
+\label{eq:gini}
+\end{equation}
+\end{definition}
+
+\section{Data}\label{sec:data}
+
+\section{Results}\label{sec:results}
+
+Table~\ref{tab:summary} reports summary statistics.
+
+\begin{table}[ht]
+\caption{Summary statistics}\label{tab:summary}%
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Variable & Mean & SD & $N$\\
+\midrule
+Household income\footnotemark[1] & -- & -- & --\\
+Gini coefficient & -- & -- & --\\
+\botrule
+\end{tabular}
+\footnotetext{Source: describe data source.}
+\footnotetext[1]{Per adult equivalent, constant prices.}
+\end{table}
+
+\section{Robustness}\label{sec:robust}
+
+\section{Conclusion}\label{sec:conclusion}
+
+\backmatter
+
+\bmhead{Supplementary information}
+Online Resource 1 (ESM\_1.pdf) contains the online appendix.
+
+\bmhead{Acknowledgements}
+Acknowledgements (people, grants; funding organisations written in full).
+
+\section*{Statements and Declarations}
+
+\bmhead{Funding}
+No funding was received for conducting this study.
+
+\bmhead{Competing interests}
+The author has no relevant financial or non-financial interests to disclose.
+
+\bmhead{Ethics approval and consent}
+Not applicable.
+
+\bmhead{Data availability}
+Describe how to access the data. In line with the Journal of Economic
+Inequality Information Deposit Policy, replication files (data sets, code,
+full list of data sources, and a README) will be deposited in a public
+repository (e.g.\ openICPSR, Zenodo, Harvard Dataverse) upon acceptance.
+
+\bmhead{Code availability}
+Replication code will be deposited together with the data.
+
+\bmhead{Author contributions}
+Quang-Vinh Dang: conceptualization, methodology, formal analysis,
+writing---original draft, writing---review and editing.
+
+\begin{appendices}
+\section{Additional results}\label{secA1}
+%% Appendix figures continue the main-text numbering (Fig. 3, not Fig. A1).
+\end{appendices}
+
+\bibliography{references}
+
+\end{document}
