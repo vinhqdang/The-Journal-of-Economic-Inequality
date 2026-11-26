@@ -1,0 +1,23 @@
+\begin{table}[ht]
+\caption{Design-based validation with the American Community Survey: relative bias (\%) of inequality and poverty estimates for non-sampled households}\label{tab:acs}%
+\begin{tabular*}{\textwidth}{@{\extracolsep\fill}llrrrrrrrr@{}}
+\toprule
+ & & \multicolumn{3}{c}{National} & \multicolumn{3}{c}{PUMA} & \multicolumn{2}{c}{PUMA Gini}\\
+\cmidrule{3-5}\cmidrule{6-8}\cmidrule{9-10}
+Predictors & Est. & Gini & MLD & FGT0 & Gini & MLD & FGT0 & RMSE & $\rho$\\
+\midrule
+Unit-level & N & $-$21.3 & $-$41.9 & $-$32.8 & $-$18.8 & $-$38.8 & $-$32.7 & 19.7 & 0.56 \\
+ & C1 & $-$28.4 & $-$55.7 & $-$39.3 & $-$26.4 & $-$53.6 & $-$39.4 & 26.9 & 0.58 \\
+ & C2 & 8.2 & 14.3 & 9.1 & 14.2 & 26.3 & 15.1 & 16.5 & 0.52 \\
+ & C3 & $-$6.0 & $-$13.6 & $-$1.2 & $-$1.0 & $-$5.0 & 4.4 & 6.7 & 0.61 \\
+ & C4 & $-$0.1 & 0.2 & 0.1 & 5.6 & 10.8 & 5.2 & 9.4 & 0.54 \\
+\midrule
+Area-context & N & $-$63.3 & $-$89.7 & $-$99.6 & $-$100.0 & $-$100.0 & $-$99.8 & 100.0 & n.a. \\
+ & C1 & $-$74.6 & $-$95.0 & $-$100.0 & $-$100.0 & $-$100.0 & $-$100.0 & 100.0 & n.a. \\
+ & C2 & 2.3 & 4.4 & 2.5 & 4.4 & 9.3 & 6.0 & 10.2 & 0.01 \\
+ & C3 & $-$7.9 & $-$20.4 & $-$0.1 & $-$8.4 & $-$20.6 & 3.1 & 11.6 & 0.41 \\
+ & C4 & $-$1.8 & $-$3.2 & $-$0.5 & 2.7 & 6.4 & 6.2 & 9.6 & 0.06 \\
+\botrule
+\end{tabular*}
+\footnotetext{Gradient boosting on $\log Y$; ten replications of a two-stage sample (20\% of PUMAs in each state, 30 households per sampled PUMA, 14{,}790 training households). Targets are all households in the 1{,}969 non-sampled PUMAs. National and PUMA columns report the mean relative bias; RMSE is the relative root mean squared error of PUMA Ginis (\%); $\rho$ is the Spearman correlation between estimated and true PUMA Ginis. n.a.: the estimate is constant within PUMAs, so all PUMA Ginis are zero. Out-of-fold $R^2$ of $\log Y$: 0.50 (unit-level) and 0.04 (area-context).}
+\end{table}

@@ -199,7 +199,39 @@ Third, the simulation estimators remove most of the bias. The binned residual bo
 %% ======================================================================
 \section{Design-based validation with the American Community Survey}\label{sec:acs}
 
-%%SECTION_ACS%%
+The Monte Carlo design is stylised. To check the estimators on a real income distribution, we use the 2023 one-year American Community Survey (ACS) Public Use Microdata Sample as a pseudo-census. In this setting the truth is known in every area. The population is the 1{,}326{,}716 occupied housing units with positive household income in the 50 states and the District of Columbia. Welfare is household income adjusted to 2023 dollars, and all indices use the household weights. The national Gini is 0.474. The poverty line is fixed at 60\% of the weighted national median (USD 47{,}713). The small areas are the 2{,}462 Public Use Microdata Areas (PUMAs), each with at least 100{,}000 residents.
+
+\subsection{Design}\label{sec:acs_design}
+
+Each replication mimics a two-stage household survey. We draw 20\% of the PUMAs in every state and then 30 households in each sampled PUMA with probability proportional to the household weight. This gives a training sample of 14{,}790 households in 493 PUMAs. The model is fitted to this sample, and inequality and poverty are then estimated for all households in the 1{,}969 non-sampled PUMAs, about 80\% of the population. The estimates are compared with the true indices of the same households at three levels: each non-sampled PUMA, each state, and the nation.
+
+We use two sets of predictors.
+\begin{itemize}
+\item The \emph{unit-level} set has 34 household characteristics, including household size and composition, tenure, rooms, vehicles, the number of workers, and the age, sex, education, race, employment and hours of the household head. It mimics a census-based poverty map in which survey and census share household covariates.
+\item The \emph{area-context} set has 13 PUMA averages of census variables, such as the share of owners, mean rooms and vehicles, the share of heads with a degree, and the share employed. Every household in a PUMA has the same values. This mimics satellite and geospatial poverty maps, whose features describe places rather than households.
+\end{itemize}
+
+The out-of-fold $R^2$ of log income is 0.50 with unit-level predictors and 0.04 with area-context predictors. We report results for gradient boosting with ten replications and $R=10$ simulation draws. The quantile forest uses 19 quantile levels, from 0.05 to 0.95, to keep computation feasible for a million target households. Results for OLS are similar and are reported in the replication package.
+
+\subsection{Results}\label{sec:acs_results}
+
+Table~\ref{tab:acs} reports the relative bias. With unit-level predictors, the plug-in map understates the national Gini by 21\%, the MLD by 42\% and the headcount by 33\%. PUMA-level indices are understated by similar amounts, and every PUMA Gini in every replication is below its true value. Mean recalibration again makes things worse. The calibration slope of gradient boosting is 0.85, so C1 contracts the predictions and raises the Gini bias to 28\%.
+
+The binned residual bootstrap (C4) is almost exactly unbiased at the national level for all three indices. At the PUMA level it overstates the Gini by 6\% and the headcount by 5\%. This is because residual dispersion is pooled across areas within a prediction decile, which assigns national within-decile dispersion to more homogeneous places. Homoskedastic simulation (C2) overstates inequality by 8 to 14\% nationally and by more within PUMAs. The 19-point quantile forest (C3) has the smallest PUMA-level error (relative RMSE of 6.7\%) but understates national inequality, because truncating at the 5th and 95th percentiles thins the tails.
+
+The area-context regime is the relevant benchmark for geospatial maps, and here the plug-in estimates are uninformative about inequality. Because every household in a PUMA receives the same prediction, the within-PUMA Gini, MLD and headcount of the plug-in map are exactly zero, whatever the true values (Fig.~\ref{fig:acs}b). National inequality is not zero, but it is only between-PUMA inequality in predicted means. The plug-in national Gini is 0.17 against a truth of 0.47, and the plug-in headcount is 0.1\% against 30\%. These are the magnitudes that Proposition~\ref{prop:decomp} implies when almost all inequality lies within areas.
+
+The simulation estimators recover the level of inequality even with an $R^2$ of 0.04. C4 is within 2\% of the national Gini and within 1\% of the national headcount. The same exercise also shows a limit of the corrections. With uninformative predictors, C2 and C4 assign almost the same residual distribution to every PUMA. They therefore get the average PUMA Gini right, but their rank correlation with the true PUMA Ginis is close to zero (0.01 and 0.06). The quantile forest lets the conditional distribution depend on the context variables and ranks PUMAs better ($\rho=0.41$), at the cost of a downward level bias. A map can only rank areas by inequality if its features predict the within-area dispersion of welfare, not just its mean.
+
+%%ACS_COVERAGE%%
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{Fig2.pdf}
+\caption{Estimated against true Gini coefficient of non-sampled PUMAs in one replication of the ACS design, with (a) unit-level and (b) area-context predictors. Gradient boosting. Grey filled circles: plug-in (N); open circles: binned residual bootstrap (C4); dashed line: 45-degree line. In panel (b) all plug-in PUMA Ginis are zero}\label{fig:acs}
+\end{figure}
+
+\input{tab_acs}
 
 %% ======================================================================
 \section{Satellite poverty maps in Africa}\label{sec:sat}

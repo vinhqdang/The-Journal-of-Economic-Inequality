@@ -171,3 +171,108 @@ def estimate_indices(X_tr, y_tr, X_te, w_te, z, model, R, rng,
     out["C4"] = _avg_indices(sims)
 
     return out
+
+
+# ---------------------------------------------------------------------------
+# Added for the design-based validation (E2). These functions return the
+# predicted welfare draws themselves instead of indices, so that callers can
+# evaluate indices on any subset of the target sample (PUMAs, states). They
+# consume the random generator in the same order as estimate_indices, so with
+# the same seed and the same inputs the two give identical draws.
+# ---------------------------------------------------------------------------
+
+def oof_and_test_predictions_folds(X_tr, ylog_tr, X_te, model, seed, fold_id):
+    """As oof_and_test_predictions, but the cross-fitting folds are given by
+    the integer labels fold_id (one per training row) instead of a random
+    KFold split. Rows that share a label are always held out together."""
+    fold_id = np.asarray(fold_id)
+    oof = np.empty(len(ylog_tr))
+    for k in np.unique(fold_id):
+        ho = fold_id == k
+        m = make_model(model, seed + int(k) + 1)
+        m.fit(X_tr[~ho], ylog_tr[~ho])
+        oof[ho] = m.predict(X_tr[ho])
+    final = make_model(model, seed)
+    final.fit(X_tr, ylog_tr)
+    return oof, np.asarray(final.predict(X_te), dtype=float)
+
+
+def predict_welfare_draws(X_tr, y_tr, X_te, model, R, rng, seed=0,
+                          c3_quantiles=None, fold_id=None,
+                          which=("N", "C1", "C2", "C3", "C4")):
+    """Predicted welfare levels in the target sample, one row per draw.
+
+    Same procedure and random-number order as estimate_indices.
+
+    Returns a dict with
+      'N', 'C1'      : arrays of shape (1, n_te)
+      'C2','C3','C4' : arrays of shape (R, n_te) (only if requested in `which`)
+      'fit'          : dict with 'oof_r2_log', 'smear', 'C1_slope', 'C1_intercept'
+    fold_id : optional fold labels for cross-fitting (see
+              oof_and_test_predictions_folds); None uses random KFold.
+    which   : estimators to compute. Skipping C3 skips the quantile forest and
+              does not consume random draws for C3.
+    """
+    y_tr = np.asarray(y_tr, dtype=float)
+    if np.any(y_tr <= 0):
+        raise ValueError("y_tr must be strictly positive")
+    ylog_tr = np.log(y_tr)
+    X_te = np.asarray(X_te, dtype=float)
+    n_te = len(X_te)
+
+    if fold_id is None:
+        oof_log, te_log = oof_and_test_predictions(X_tr, ylog_tr, X_te, model, seed)
+    else:
+        oof_log, te_log = oof_and_test_predictions_folds(
+            X_tr, ylog_tr, X_te, model, seed, fold_id)
+    resid = ylog_tr - oof_log
+    smear = float(np.mean(np.exp(resid)))
+
+    fit_info = {"oof_r2_log": oof_r2(ylog_tr, oof_log), "smear": smear}
+    out = {"fit": fit_info}
+
+    yhat_te = np.exp(te_log) * smear
+    out["N"] = yhat_te[None, :]
+
+    yhat_oof = np.exp(oof_log) * smear
+    xm, ym = yhat_oof.mean(), y_tr.mean()
+    b = np.sum((yhat_oof - xm) * (y_tr - ym)) / np.sum((yhat_oof - xm) ** 2)
+    a = ym - b * xm
+    floor = 0.01 * np.min(y_tr[y_tr > 0])
+    out["C1"] = np.maximum(a + b * yhat_te, floor)[None, :]
+    fit_info["C1_slope"] = float(b)
+    fit_info["C1_intercept"] = float(a)
+
+    if "C2" in which:
+        out["C2"] = np.stack([np.exp(te_log + rng.choice(resid, size=n_te, replace=True))
+                              for _ in range(R)])
+
+    if "C3" in which:
+        if c3_quantiles is None:
+            c3_quantiles = fit_qrf_quantiles(X_tr, ylog_tr, X_te, seed + 7919)
+        rows = np.arange(n_te)
+        draws = []
+        for _ in range(R):
+            k = rng.integers(0, len(QUANTILES), size=n_te)
+            draws.append(np.exp(c3_quantiles[rows, k]))
+        out["C3"] = np.stack(draws)
+
+    if "C4" in which:
+        cuts = np.quantile(oof_log, np.linspace(0.1, 0.9, 9))
+        b_tr = np.digitize(oof_log, cuts)
+        b_te = np.digitize(te_log, cuts)
+        order = np.argsort(b_tr, kind="stable")
+        pool = resid[order]
+        counts = np.bincount(b_tr, minlength=10)
+        starts = np.concatenate(([0], np.cumsum(counts)[:-1]))
+        if np.any(counts == 0):
+            raise ValueError("empty decile bin in training OOF predictions")
+        draws = []
+        for _ in range(R):
+            u = rng.random(n_te)
+            idx = starts[b_te] + np.minimum((u * counts[b_te]).astype(int),
+                                            counts[b_te] - 1)
+            draws.append(np.exp(te_log + pool[idx]))
+        out["C4"] = np.stack(draws)
+
+    return out

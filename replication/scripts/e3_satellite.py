@@ -8,7 +8,7 @@ Two cross-fitting schemes give out-of-fold (OOF) predictions for every cluster:
 Point models: ridge (standardise, clip +/-5, RidgeCV) and lgbm.
 Between-cluster distribution estimators, by country-year:
   N   plug-in OOF prediction
-  C1  linear recalibration y = a + b * yhat, (a, b) from nested inner OOF
+  C1  linear recalibration y = a + b * yhat, (a, b) from training-fold OOF
   C2  additive homoskedastic residual simulation, R = 200
   C3  quantile regression forest, 99 predicted quantiles, R = 200 (model 'qrf')
   C4  residual bootstrap within deciles of yhat, R = 200
@@ -90,15 +90,6 @@ def fit_predict(name, Xtr, ytr, Xte, seed):
     return np.asarray(m.predict(Xte), dtype=float)
 
 
-def inner_oof(name, Xtr, ytr, gtr, seed):
-    """Nested 3-fold OOF predictions on the training data, grouped so that
-    inner folds respect the scheme's block structure (fold_spatial or country)."""
-    oof = np.empty(len(ytr))
-    for j, (a, b) in enumerate(GroupKFold(n_splits=3).split(Xtr, ytr, gtr)):
-        oof[b] = fit_predict(name, Xtr[a], ytr[a], Xtr[b], seed + 1000 + j)
-    return oof
-
-
 def qrf_quantiles(Xtr, ytr, Xte, seed, chunk=1000):
     qrf = RandomForestQuantileRegressor(
         n_estimators=300, min_samples_leaf=20, max_features=0.3,
@@ -112,11 +103,23 @@ def qrf_quantiles(Xtr, ytr, Xte, seed, chunk=1000):
 
 
 # ---------------------------------------------------------------- cross-fitting
-def cross_fit(scheme, X, y, fold, inner_group, seed):
-    """Returns dict: (model, est) -> array (n,) for N, C1 and (R, n) for C2, C4,
-    and ('qrf', 'C3') -> (R, n). Every cluster is predicted from the fold that
-    holds it out."""
+def cross_fit(scheme, X, y, fold, seed):
+    """Two passes per point model.
+
+    Pass 1: outer out-of-fold (OOF) predictions yhat for every cluster. The
+    prediction for fold k is the model trained on all other folds.
+    Pass 2: for held-out fold k, the calibration (C1), residual pool (C2) and
+    decile residual pools (C4) use the OOF predictions and outcomes of the
+    training clusters (fold != k). This is the fallback allowed in the spec:
+    nested inner folds were too slow on the shared machine, and the training
+    OOF predictions were produced by models that saw fold k. This is a
+    documented, mild leakage (see e3_notes.txt).
+
+    Returns dict (model, est) -> array (n,) for N, C1, and (R, n) for C2, C4;
+    ('qrf', 'C3') -> (R, n). Each cluster is predicted from the fold holding it out.
+    """
     n = len(y)
+    folds = np.unique(fold)
     res = {}
     for m in POINT_MODELS:
         res[(m, "N")] = np.full(n, np.nan)
@@ -126,35 +129,37 @@ def cross_fit(scheme, X, y, fold, inner_group, seed):
     res[("qrf", "C3")] = np.full((R, n), np.nan)
     diag = {f"{m}_{p}": [] for m in POINT_MODELS for p in ("slope", "intercept")}
 
-    for k_i, k in enumerate(np.unique(fold)):
+    # Pass 1: OOF point predictions
+    oof = {m: np.full(n, np.nan) for m in POINT_MODELS}
+    for m_i, m in enumerate(POINT_MODELS):
         t0 = time.time()
+        for k_i, k in enumerate(folds):
+            tr = fold != k
+            te = ~tr
+            oof[m][te] = fit_predict(m, X[tr], y[tr], X[te], seed + 100 * k_i + 10 * m_i)
+        print(f"    {scheme} {m} OOF over {len(folds)} folds: {time.time() - t0:.1f}s", flush=True)
+        res[(m, "N")][:] = oof[m]
+
+    # Pass 2: calibration, C2, C4 for each held-out fold
+    for k_i, k in enumerate(folds):
         tr = fold != k
         te = ~tr
-        Xtr, ytr, Xte = X[tr], y[tr], X[te]
-        gtr = inner_group[tr]
         nte = int(te.sum())
         rng = np.random.default_rng(seed + 17 * k_i)
-        for m_i, m in enumerate(POINT_MODELS):
-            s = seed + 100 * k_i + 10 * m_i
-            yhat_te = fit_predict(m, Xtr, ytr, Xte, s)
-            yhat_in = inner_oof(m, Xtr, ytr, gtr, s)
+        for m in POINT_MODELS:
+            yhat_tr, y_tr = oof[m][tr], y[tr]
+            yhat_te = oof[m][te]
 
-            # N
-            res[(m, "N")][te] = yhat_te
-
-            # C1: linear recalibration fitted on nested inner OOF predictions
-            b, a = np.polyfit(yhat_in, ytr, 1)
+            b, a = np.polyfit(yhat_tr, y_tr, 1)
             res[(m, "C1")][te] = a + b * yhat_te
             diag[f"{m}_slope"].append(b)
             diag[f"{m}_intercept"].append(a)
 
-            resid = ytr - yhat_in
-            # C2: additive homoskedastic residual simulation (pooled residuals)
+            resid = y_tr - yhat_tr
             res[(m, "C2")][:, te] = yhat_te[None, :] + rng.choice(resid, size=(R, nte))
 
-            # C4: residual bootstrap within deciles of yhat (training deciles)
-            edges = np.quantile(yhat_in, np.arange(1, 10) / 10.0)
-            b_tr = np.searchsorted(edges, yhat_in, side="right")
+            edges = np.quantile(yhat_tr, np.arange(1, 10) / 10.0)
+            b_tr = np.searchsorted(edges, yhat_tr, side="right")
             b_te = np.searchsorted(edges, yhat_te, side="right")
             c4 = np.empty((R, nte))
             for d in range(10):
@@ -167,12 +172,17 @@ def cross_fit(scheme, X, y, fold, inner_group, seed):
                 c4[:, cols] = yhat_te[cols][None, :] + rng.choice(pool, size=(R, len(cols)))
             res[(m, "C4")][:, te] = c4
 
-        # C3: quantile regression forest, one draw of a predicted quantile per cluster
-        Q = qrf_quantiles(Xtr, ytr, Xte, seed + 7 * k_i)
+    # C3: quantile regression forest per fold, one predicted quantile drawn per cluster
+    for k_i, k in enumerate(folds):
+        t0 = time.time()
+        tr = fold != k
+        te = ~tr
+        nte = int(te.sum())
+        rng = np.random.default_rng(seed + 31 * k_i + 5)
+        Q = qrf_quantiles(X[tr], y[tr], X[te], seed + 7 * k_i)
         j = rng.integers(0, len(QUANTILES), size=(R, nte))
         res[("qrf", "C3")][:, te] = Q[np.arange(nte)[None, :], j]
-
-        print(f"    {scheme} fold {k} ({nte} clusters): {time.time() - t0:.1f}s", flush=True)
+        print(f"    {scheme} QRF fold {k} ({nte} clusters): {time.time() - t0:.1f}s", flush=True)
     return res, diag
 
 
@@ -234,14 +244,11 @@ def main():
     timing = {}
     diag_all = {}
 
-    fold_specs = {
-        "in_country": (fold_sp, fold_sp),
-        "out_country": (fold_co, country),
-    }
+    fold_specs = {"in_country": fold_sp, "out_country": fold_co}
     for si, scheme in enumerate(SCHEMES):
-        fold, inner_group = fold_specs[scheme]
+        fold = fold_specs[scheme]
         tic(f"cross_fit_{scheme}")
-        res, diag = cross_fit(scheme, X, y, fold, inner_group, SEED + 1000 * si)
+        res, diag = cross_fit(scheme, X, y, fold, SEED + 1000 * si)
         timing[scheme] = toc(f"cross_fit_{scheme}")
         diag_all[scheme] = diag
 
@@ -362,8 +369,8 @@ def write_table(summ):
                 if r.empty:
                     continue
                 r = r.iloc[0]
-                sch = SCHEME_LABEL[scheme] if (m == "ridge" and est == "N") else ""
-                mod = MODEL_LABEL[m] if est == "N" or (m == "qrf") else ""
+                sch = SCHEME_LABEL[scheme]
+                mod = MODEL_LABEL[m]
                 lines.append(
                     f"{sch} & {mod} & {LABEL[est]} & {r.rel_bias_abs_gini_pct:.1f} & "
                     f"{r.rel_bias_sd_pct:.1f} & {r.rel_bias_p90_p10_pct:.1f} & "
@@ -452,32 +459,35 @@ def write_notes(summ, cty, timing, total, cutoff, groups, dropped, nfeat, diag_a
     add("         subsample 0.8 (subsample_freq = 1 set, otherwise LightGBM ignores subsample),")
     add("         colsample_bytree 0.5, verbose -1, n_jobs 4. No feature standardisation (trees).")
     add("")
-    add("NESTED INNER OOF (used by C1, C2, C4)")
-    add("  For each outer fold, the training clusters get 3-fold inner out-of-fold predictions.")
-    add("  Inner folds are grouped to respect the scheme: fold_spatial labels for in_country and")
-    add("  country for out_country (sklearn GroupKFold(3)). This is a deviation from a random 3-fold")
-    add("  split and is chosen so that inner predictions are not inflated by within-block or within-")
-    add("  country spatial correlation. Inner models are trained on about two thirds of the training")
-    add("  data, so inner residuals are slightly larger than the outer model's residuals. This is a")
-    add("  conservative choice for the simulation estimators.")
+    add("OUTER OOF AND CALIBRATION POOL (used by C1, C2, C4)")
+    add("  Pass 1: for each point model, the OOF prediction of fold k is the model trained on all other")
+    add("  folds (5 fits for in_country, 23 for out_country per model).")
+    add("  Pass 2: for held-out fold k, the calibration, residual pool and decile edges use the OOF")
+    add("  predictions and outcomes of the training clusters (fold != k).")
+    add("  DEVIATION: the spec's main option for C1 (nested 3-fold inside each training fold) was not")
+    add("  used. On the shared 4-core machine a single LightGBM fit took several seconds to minutes, so")
+    add("  nested folds (about 4x the number of fits) would have exceeded the runtime goal. The spec's")
+    add("  fallback is used for all of C1, C2 and C4.")
+    add("  Leakage: the training clusters' OOF predictions in pass 2 come from models that were trained")
+    add("  on fold k's outcomes. This can make the calibration and residual pools slightly optimistic")
+    add("  for the held-out fold. The effect is expected to be small; it is not quantified here.")
     add("")
     add("ESTIMATORS (all indices averaged over R = 200 draws where simulated)")
     add("  N : plug-in OOF prediction yhat.")
-    add("  C1: y_cal = a + b * yhat. (a, b) by OLS of y on the nested inner OOF prediction for the")
-    add("      training clusters of that outer fold. Applied to the held-out yhat. Full nested")
-    add("      version; the simpler alternative was not needed.")
+    add("  C1: y_cal = a + b * yhat. (a, b) by OLS of y on the OOF prediction over the training")
+    add("      clusters of that outer fold. Applied to the held-out yhat.")
     add(f"      Median calibration slope b: in_country ridge {med_diag('in_country', 'ridge_slope'):.3f}, "
         f"lgbm {med_diag('in_country', 'lgbm_slope'):.3f}; out_country ridge "
         f"{med_diag('out_country', 'ridge_slope'):.3f}, lgbm {med_diag('out_country', 'lgbm_slope'):.3f}.")
-    add("  C2: y* = yhat + e*, e* drawn with replacement from the pooled nested inner OOF residuals of")
-    add("      the training clusters (y - yhat_inner). Homoskedastic.")
+    add("  C2: y* = yhat + e*, e* drawn with replacement from the pooled OOF residuals of the training")
+    add("      clusters (y - yhat_oof). Homoskedastic.")
     add("  C3: quantile regression forest (quantile_forest.RandomForestQuantileRegressor, 300 trees,")
     add("      min_samples_leaf 20, max_features 0.3, n_jobs 4) fitted per outer fold on the training")
     add("      clusters. For each held-out cluster and each replicate, one of the 99 predicted")
     add("      quantiles (0.01, ..., 0.99) is drawn uniformly. C3 does not depend on the ridge/lgbm")
     add("      point model, so it is reported once with model label 'qrf'.")
-    add("  C4: residual bootstrap within deciles of yhat. Deciles are the 10% quantiles of the nested")
-    add("      inner OOF prediction over the training clusters. Each held-out cluster takes residuals")
+    add("  C4: residual bootstrap within deciles of yhat. Deciles are the 10% quantiles of the OOF")
+    add("      prediction over the training clusters. Each held-out cluster takes residuals")
     add("      from the training residuals in its decile bin, drawn with replacement.")
     add("")
     add("INDICES (ineq.all_absolute, unweighted, translation invariant)")
@@ -521,10 +531,9 @@ def write_notes(summ, cty, timing, total, cutoff, groups, dropped, nfeat, diag_a
     add("  - Survey weights and the unit of the DHS sampling design are not used (cluster unweighted).")
     add("  - Country-year sample sizes are small for some surveys (down to 140 clusters); estimates")
     add("    in those cells are noisier and affect the rank correlations.")
-    add("  - Out-of-country predictions come from models trained on 22 countries; in the nested inner")
-    add("    folds the number of countries is about 15, so inner residuals are a bit larger.")
-    add("  - C1, C2 and C4 use inner OOF residuals rather than the outer OOF residuals, to avoid")
-    add("    using the held-out fold's outcome inside the training residual pool.")
+    add("  - Out-of-country predictions come from models trained on 22 countries.")
+    add("  - C1, C2 and C4 use the outer OOF predictions of the training clusters (see the deviation")
+    add("    above), which carries the mild leakage described there.")
     add("  - The C3 quantile forest is fitted once per fold and shared by both point models.")
     add("")
     add("SUMMARY (from e3_summary.csv)")
