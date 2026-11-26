@@ -233,3 +233,4 @@ __marimo__/
 *.fdb_latexmk
 *.fls
 *.spl
+paper/main.pdf
