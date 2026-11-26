@@ -234,3 +234,7 @@ __marimo__/
 *.fls
 *.spl
 paper/main.pdf
+
+# Replication data and caches
+replication/data/
+__pycache__/
