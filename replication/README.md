@@ -1,0 +1,87 @@
+# Replication package
+
+*Predicted welfare is too equal: inequality and poverty measurement with machine-learning poverty maps*
+
+Quang-Vinh Dang, British University Vietnam.
+
+This package reproduces every table and figure in the paper. All data sources are public, and no registration is needed. The raw data are not redistributed. The preparation scripts download them from the original sources.
+
+## Software
+
+- Python 3.13
+- numpy 2.5
+- pandas 3.0
+- scipy 1.18
+- scikit-learn 1.9.1
+- lightgbm 4.7
+- quantile-forest 1.5
+- matplotlib 3.11
+- pyarrow 26
+
+Install the packages with:
+
+```bash
+pip install numpy pandas scipy scikit-learn==1.9.1 lightgbm quantile-forest matplotlib pyarrow
+```
+
+The paper uses a TeX Live distribution with `pdflatex` and `bibtex`.
+
+## Data sources
+
+| Exercise | Source | Files | Access |
+|---|---|---|---|
+| Monte Carlo (E1) | Simulated | none | n/a |
+| Design-based validation (E2) | U.S. Census Bureau, American Community Survey 2023 1-year PUMS | `csv_hus.zip`, `csv_pus.zip` from https://www2.census.gov/programs-surveys/acs/data/pums/2023/1-Year/ | public domain |
+| Satellite application (E3) | Yeh et al. (2020), *Nature Communications* 11:2583 | `dhs_clusters.csv`, `dhs_image_hists.npz` from https://github.com/sustainlab-group/africa_poverty (`data/`) | public, MIT licence |
+
+The cluster wealth index in the E3 file is derived from Demographic and Health Surveys (DHS) data by Yeh et al. Users of the DHS microdata themselves must register with the DHS Program.
+
+## Layout
+
+```
+src/ineq.py              weighted inequality and poverty indices
+src/estimators.py        plug-in (N), recalibration (C1) and simulation (C2-C4) estimators
+scripts/e1_montecarlo.py Monte Carlo (Section 5, Table 2, Fig. 1)
+scripts/make_tables_e1.py  Tables 1-2 -> paper/tab_lognormal.tex, paper/tab_mc.tex
+scripts/e2_prepare_acs.py  download and build the ACS household file
+scripts/e2_design_based.py design-based validation (Section 6, Fig. 2)
+scripts/make_tables_e2.py  Table 3 -> paper/tab_acs.tex
+scripts/e3_prepare_dhs.py  download and build DHS cluster features
+scripts/e3_satellite.py    satellite application (Section 7)
+output/                  results, notes and figures written by the scripts
+data/                    downloaded data (not tracked)
+```
+
+## Running
+
+Run all commands from `replication/`. Approximate run times are for a 4-core machine.
+
+```bash
+python3 scripts/e1_montecarlo.py --reps 8 --R 50      # about 1 hour
+python3 scripts/make_tables_e1.py
+```
+
+```bash
+python3 scripts/e2_prepare_acs.py                     # downloads about 1.5 GB
+python3 scripts/e2_design_based.py --stage main --reps 10                         # about 40 min
+python3 scripts/e2_design_based.py --stage coverage --cov-reps 10 --B 30 --cov-deadline-min 60
+python3 scripts/e2_design_based.py --stage report --reps 10 --cov-reps 10
+python3 scripts/make_tables_e2.py
+```
+
+```bash
+python3 scripts/e3_prepare_dhs.py
+python3 scripts/e3_satellite.py
+```
+
+Copy the figures into `paper/`:
+
+- `output/Fig_e1_bias.pdf` to `paper/Fig1.pdf`
+- `output/Fig_e2_area_gini.pdf` to `paper/Fig2.pdf`
+- `output/Fig_e3_country.pdf` to `paper/Fig3.pdf`
+
+Each script writes a `*_notes.txt` or `*_checks.txt` file in `output/`. These record the design actually run, the sanity checks and every deviation from the design in the paper.
+
+## Random seeds
+
+All scripts use fixed seeds that are set at the top of each script, so results are reproducible up to floating-point differences across thread counts in LightGBM.

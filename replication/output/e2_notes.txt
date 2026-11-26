@@ -8,6 +8,7 @@ Data: replication/data/acs/acs2023_households.parquet (ACS 2023 1-year PUMS,
 
 Design actually used
   Replications (main exercise): 10 (seeds SEED_ROOT + 10000 r, SEED_ROOT = 20260601).
+  Reduced from the target design (main 20, coverage 10) for run time: main 10, coverage 5.
   Sampling stage 1: 20% of PUMAs within each state, rounded, at least 1 per state,
     drawn uniformly without replacement.
   Sampling stage 2: 30 households per sampled PUMA, probability proportional to wgtp,
@@ -19,11 +20,10 @@ Design actually used
   Estimators: N, C1 (linear recalibration), C2 (pooled residual simulation), C3 (quantile
     regression forest, 19 quantile levels 0.05-0.95, see deviations), C4 (decile residual
     bootstrap). R = 10 draws for C2, C3 and C4 in the main exercise.
-    Why R = 10 and not 100: each draw costs one pass over the 1.06M target households at
-    three aggregation levels; R = 100 would multiply the main-exercise cost by about 10.
-    Simulation noise in averaged indices falls with R, and at this population size the
-    draw-to-draw variation of the national and state indices is already small relative to
-    the bias being measured. Coverage uses R = 3 (as the design allows).
+    Why R = 10 and not 100: cost. Each draw is one pass over about 1.06M target households at
+    three aggregation levels; R = 100 would have multiplied the run time by about 10 on this
+    machine. The simulation variability of the averaged indices was not measured separately.
+    Coverage uses R = 3 (task specification).
   Indices: Gini, MLD, Theil, FGT0, FGT1 (z fixed), weighted by wgtp.
   Truth: indices of actual y in the same target population of the same replication.
   Metrics: relative bias = mean over (units, reps) of (est - true)/true, in %;
@@ -56,7 +56,13 @@ Runtimes (wall clock, shared 4-core machine with another job)
   main exercise total (sum of replications): 35.7 min
 
 Coverage (bootstrap)
-  Not run.
+  Replications: [0, 1, 2, 3, 4] (B = 30, R = 3).
+  PUMA-cluster bootstrap: sampled PUMAs resampled with replacement; training households of
+  a duplicated PUMA are duplicated; cross-fitting folds are assigned per household so
+  that copies of the same household share a fold. Percentile 5-95 interval.
+  The bootstrap resamples the training sample only: the target population of each rep is
+  held fixed, so intervals are conditional on the set of non-sampled PUMAs.
+  Coverage run time: 64.8 min total.
 
 Sanity checks
   Context regime, N: max |within-PUMA Gini| over all PUMAs and reps = 2.432e-15
@@ -75,8 +81,8 @@ Deviations and limitations
     and constant values beyond 0.05 and 0.95. Reason: predicting 99 quantiles for about 1.06M
     target households took several minutes per replication on the shared machine. The tails
     below the 5th and above the 95th percentile are therefore not represented. C3 inequality is
-    biased downward relative to a full 99-point forest for this reason; the size of that effect
-    was not measured.
+    likely biased downward relative to a full 99-point forest for this reason; the size of that
+    effect was not measured.
   - LightGBM runs with 2 threads; estimators.make_model specifies 4. The script sets the thread
     count at run time, because a second job shared the 4 cores and 4-thread fits took 10-90 s
     instead of under 1 s. The model is the same; floating-point results may differ in the last digits.
@@ -94,5 +100,5 @@ Files
   /home/user/The-Journal-of-Economic-Inequality/replication/output/e2_results_raw.csv
   /home/user/The-Journal-of-Economic-Inequality/replication/output/e2_summary.csv
   /home/user/The-Journal-of-Economic-Inequality/replication/output/e2_table_main.tex
-  (coverage not written)
+  /home/user/The-Journal-of-Economic-Inequality/replication/output/e2_coverage.csv
   /home/user/The-Journal-of-Economic-Inequality/replication/output/Fig_e2_area_gini.pdf

@@ -1,0 +1,17 @@
+regime,model,estimator,level,index,n_reps,n_units,coverage,mean_width_rel_pct,nominal,B
+context,lgbm,C4,national,gini,5,5,0.4000,2.5227,0.9000,30
+context,lgbm,C4,national,mld,5,5,0.4000,4.7482,0.9000,30
+context,lgbm,C4,state,gini,5,255,0.4863,4.2493,0.9000,30
+context,lgbm,C4,state,mld,5,255,0.4863,8.8822,0.9000,30
+context,lgbm,N,national,gini,5,5,0.0000,3.6536,0.9000,30
+context,lgbm,N,national,mld,5,5,0.0000,2.1264,0.9000,30
+context,lgbm,N,state,gini,5,255,0.0000,9.1276,0.9000,30
+context,lgbm,N,state,mld,5,255,0.0000,4.0586,0.9000,30
+unit,lgbm,C4,national,gini,5,5,0.8000,2.5390,0.9000,30
+unit,lgbm,C4,national,mld,5,5,1.0000,4.9617,0.9000,30
+unit,lgbm,C4,state,gini,5,255,0.2471,3.3603,0.9000,30
+unit,lgbm,C4,state,mld,5,255,0.2510,7.2490,0.9000,30
+unit,lgbm,N,national,gini,5,5,0.0000,1.9427,0.9000,30
+unit,lgbm,N,national,mld,5,5,0.0000,2.9671,0.9000,30
+unit,lgbm,N,state,gini,5,255,0.0000,2.7320,0.9000,30
+unit,lgbm,N,state,mld,5,255,0.0000,4.1673,0.9000,30
