@@ -1,0 +1,74 @@
+E2 data summary: ACS 2023 1-year PUMS, occupied housing units with HINCP > 0
+
+Sources: https://www2.census.gov/programs-surveys/acs/data/pums/2023/1-Year/csv_hus.zip (psam_husa/b.csv), https://www2.census.gov/programs-surveys/acs/data/pums/2023/1-Year/csv_pus.zip (psam_pusa/b.csv)
+Household records in file:                1,620,290
+Occupied housing units (TYPEHUGQ==1, NP>0): 1,343,045
+Analysis households (HINCP > 0):          1,326,716
+Weighted households (sum WGTP):           129,461,220
+Number of PUMAs (area ids):               2,462
+Number of states (50 states + DC; PR not in national files): 51
+PUMAs with context features:              2,462
+
+Income y = HINCP * ADJINC / 1e6 (2023 dollars)
+National weighted Gini of y:              0.4739
+National weighted median of y:            79,522.40
+National weighted mean of y:              110,819.04
+
+Unit-level features (u_*):
+  u_np                 Number of persons in household (NP)
+  u_n_under18          Number of persons aged < 18 in household (person file count)
+  u_n_65plus           Number of persons aged >= 65 in household (person file count)
+  u_noc                Number of own children in household (NOC)
+  u_owner              Owner-occupied dummy (TEN in {1,2})
+  u_tenure             Tenure code (TEN: 1 owned w/ mortgage, 2 owned free, 3 rented, 4 no rent)
+  u_rooms              Number of rooms (RMSP; 2023 name for RMSPP)
+  u_bedrooms           Number of bedrooms (BDSP)
+  u_vehicles           Number of vehicles (VEH; 6 = six or more)
+  u_workers            Workers in family (WIF; 3 = three or more)
+  u_hhl                Household language (HHL)
+  u_bld                Building type (BLD; 2 = one-family detached)
+  u_yrblt              Year structure built (YRBLT), -1 if missing
+  u_yrblt_miss         Missing-indicator for YRBLT
+  u_accessinet         Internet access (ACCESSINET: 1 paid, 2 unpaid, 3 none), -1 if missing
+  u_accessinet_miss    Missing-indicator for ACCESSINET
+  u_hupac              Presence/age of children (HUPAC; 4 = no children)
+  u_head_missing       1 if no reference person (RELSHIPP==20) found for household
+  u_head_age           Head age in years (AGEP)
+  u_head_female        Head female dummy (SEX==2)
+  u_head_schl          Head educational attainment (SCHL, 1-24), -1 if missing
+  u_head_schl_miss     Missing-indicator for head SCHL
+  u_head_ba            Head holds BA or higher (SCHL >= 21)
+  u_head_white         Head race White alone (RAC1P==1)
+  u_head_black         Head race Black alone (RAC1P==2)
+  u_head_asian         Head race Asian alone (RAC1P==6)
+  u_head_aian          Head race AIAN/AN alone (RAC1P in 3,4,5)
+  u_head_hispanic      Head Hispanic dummy (HISP > 1)
+  u_head_married       Head married, spouse present (MAR==1)
+  u_head_wkhp          Head usual hours worked per week (WKHP), -1 if missing
+  u_head_wkhp_miss     Missing-indicator for head WKHP (blank = did not work in past 12 months)
+  u_head_employed      Head employed dummy (ESR in 1,2,4,5)
+  u_head_disability    Head disability dummy (DIS==1)
+  u_head_foreign_born  Head foreign-born dummy (NATIVITY==2)
+
+Area-context features (c_*), PUMA-level WGTP-weighted means over all occupied units:
+  c_share_owner          Share of occupied households that own their home (TEN in 1,2)
+  c_mean_rooms           Mean number of rooms per household (RMSP)
+  c_mean_vehicles        Mean number of vehicles per household (VEH)
+  c_share_head_ba        Share of household heads with BA or higher
+  c_share_head_employed  Share of household heads employed
+  c_mean_hh_size         Mean household size (NP)
+  c_share_hh_children    Share of households with own children (NOC > 0)
+  c_share_hh_65plus      Share of households with a person aged 65+
+  c_share_internet       Share of households with internet access (ACCESSINET in 1,2; denominator excludes missing)
+  c_share_head_hispanic  Share of household heads Hispanic
+  c_share_head_black     Share of household heads Black alone
+  c_share_sf_detached    Share of housing units one-family detached (BLD==2)
+  c_mean_head_age        Mean age of household heads
+
+Other columns: serialno (household id), st (state FIPS), puma (PUMA code),
+  area = st*100000 + puma, wgtp (household weight), y (adjusted HINCP).
+
+Notes:
+  Head = person with RELSHIPP==20, merged on SERIALNO; missing values filled with -1 plus indicators.
+  Occupied = TYPEHUGQ==1 and NP>0. Context features use no income variables.
+  Gini: weighted midpoint-rank formula, checked against closed-form cases.

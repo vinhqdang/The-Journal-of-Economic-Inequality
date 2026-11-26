@@ -53,15 +53,15 @@ UNIT_FEATURES = {
     "u_bld": "Building type (BLD; 2 = one-family detached)",
     "u_yrblt": "Year structure built (YRBLT), -1 if missing",
     "u_yrblt_miss": "Missing-indicator for YRBLT",
-    "u_accessinet": "Internet access at home (ACCESSINET: 1 yes, 2 no), -1 if missing",
+    "u_accessinet": "Internet access (ACCESSINET: 1 paid, 2 unpaid, 3 none), -1 if missing",
     "u_accessinet_miss": "Missing-indicator for ACCESSINET",
     "u_hupac": "Presence/age of children (HUPAC; 4 = no children)",
     "u_head_missing": "1 if no reference person (RELSHIPP==20) found for household",
     "u_head_age": "Head age in years (AGEP)",
     "u_head_female": "Head female dummy (SEX==2)",
-    "u_head_schl": "Head educational attainment (SCHL, 1-25), -1 if missing",
+    "u_head_schl": "Head educational attainment (SCHL, 1-24), -1 if missing",
     "u_head_schl_miss": "Missing-indicator for head SCHL",
-    "u_head_ba": "Head holds BA or higher (SCHL >= 22)",
+    "u_head_ba": "Head holds BA or higher (SCHL >= 21)",
     "u_head_white": "Head race White alone (RAC1P==1)",
     "u_head_black": "Head race Black alone (RAC1P==2)",
     "u_head_asian": "Head race Asian alone (RAC1P==6)",
@@ -69,7 +69,7 @@ UNIT_FEATURES = {
     "u_head_hispanic": "Head Hispanic dummy (HISP > 1)",
     "u_head_married": "Head married, spouse present (MAR==1)",
     "u_head_wkhp": "Head usual hours worked per week (WKHP), -1 if missing",
-    "u_head_wkhp_miss": "Missing-indicator for head WKHP",
+    "u_head_wkhp_miss": "Missing-indicator for head WKHP (blank = did not work in past 12 months)",
     "u_head_employed": "Head employed dummy (ESR in 1,2,4,5)",
     "u_head_disability": "Head disability dummy (DIS==1)",
     "u_head_foreign_born": "Head foreign-born dummy (NATIVITY==2)",
@@ -85,7 +85,7 @@ CONTEXT_FEATURES = {
     "c_mean_hh_size": "Mean household size (NP)",
     "c_share_hh_children": "Share of households with own children (NOC > 0)",
     "c_share_hh_65plus": "Share of households with a person aged 65+",
-    "c_share_internet": "Share of households with home internet access (ACCESSINET==1)",
+    "c_share_internet": "Share of households with internet access (ACCESSINET in 1,2; denominator excludes missing)",
     "c_share_head_hispanic": "Share of household heads Hispanic",
     "c_share_head_black": "Share of household heads Black alone",
     "c_share_sf_detached": "Share of housing units one-family detached (BLD==2)",
@@ -227,7 +227,7 @@ def main():
     f["u_head_female"] = hd(df["SEX"] == 2)
     f["u_head_schl"] = df["SCHL"].fillna(-1)
     f["u_head_schl_miss"] = (df["SCHL"].isna() & ~head_missing).astype(float)
-    f["u_head_ba"] = hd(df["SCHL"] >= 22)
+    f["u_head_ba"] = hd(df["SCHL"] >= 21)
     f["u_head_white"] = hd(df["RAC1P"] == 1)
     f["u_head_black"] = hd(df["RAC1P"] == 2)
     f["u_head_asian"] = hd(df["RAC1P"] == 6)
@@ -248,14 +248,14 @@ def main():
     ctx_src["c_mean_rooms"] = df["RMSP"]
     ctx_src["c_mean_vehicles"] = df["VEH"].where(df["VEH"] >= 0)
     ctx_src["c_share_head_ba"] = np.where(head_missing | df["SCHL"].isna(), np.nan,
-                                          (df["SCHL"] >= 22).astype(float))
+                                          (df["SCHL"] >= 21).astype(float))
     ctx_src["c_share_head_employed"] = np.where(head_missing | df["ESR"].isna(), np.nan,
                                                 df["ESR"].isin([1, 2, 4, 5]).astype(float))
     ctx_src["c_mean_hh_size"] = df["NP"]
     ctx_src["c_share_hh_children"] = np.where(df["NOC"].isna(), np.nan, (df["NOC"] > 0).astype(float))
     ctx_src["c_share_hh_65plus"] = (df["n_65"] > 0).astype(float)
-    ctx_src["c_share_internet"] = np.where(df["ACCESSINET"].isin([1, 2]),
-                                           (df["ACCESSINET"] == 1).astype(float), np.nan)
+    ctx_src["c_share_internet"] = np.where(df["ACCESSINET"].isin([1, 2, 3]),
+                                           df["ACCESSINET"].isin([1, 2]).astype(float), np.nan)
     ctx_src["c_share_head_hispanic"] = np.where(head_missing | df["HISP"].isna(), np.nan,
                                                 (df["HISP"] > 1).astype(float))
     ctx_src["c_share_head_black"] = np.where(head_missing | df["RAC1P"].isna(), np.nan,
@@ -283,7 +283,7 @@ def main():
     out = pd.concat([out, ctx_s], axis=1)
 
     assert out["y"].notna().all() and (out["y"] > 0).all()
-    assert out["wgtp"].gt(0).all() or (out["wgtp"] >= 0).all()
+    assert (out["wgtp"] > 0).all()
     assert not any("income" in c.lower() or c.startswith("c_") and "inc" in c.lower() for c in out.columns)
 
     out.to_parquet(PARQUET_PATH, index=False)
@@ -306,7 +306,7 @@ def main():
     lines.append(f"Analysis households (HINCP > 0):          {len(out):,}")
     lines.append(f"Weighted households (sum WGTP):           {wv.sum():,.0f}")
     lines.append(f"Number of PUMAs (area ids):               {n_puma:,}")
-    lines.append(f"Number of states (incl. DC, PR):          {n_state:,}")
+    lines.append(f"Number of states (50 states + DC; PR not in national files): {n_state:,}")
     lines.append(f"PUMAs with context features:              {n_ctx_areas:,}")
     lines.append("")
     lines.append("Income y = HINCP * ADJINC / 1e6 (2023 dollars)")
