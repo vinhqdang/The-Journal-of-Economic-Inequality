@@ -3,9 +3,7 @@
 %% Springer Nature LaTeX template (sn-jnl), author-year referencing.
 %% Submission rule: upload all files from this folder flat (no subfolders).
 %% ======================================================================
-\documentclass[pdflatex,sn-mathphys-ay]{sn-jnl}% Author-year: (Atkinson 1970)
-%% For review copy with double spacing and line numbers use instead:
-%% \documentclass[pdflatex,referee,lineno,sn-mathphys-ay]{sn-jnl}
+\documentclass[pdflatex,sn-mathphys-ay]{sn-jnl}
 
 \usepackage{graphicx}%
 \usepackage{multirow}%
@@ -16,90 +14,207 @@
 \usepackage{textcomp}%
 \usepackage{manyfoot}%
 \usepackage{booktabs}%
-\usepackage{threeparttable}%
 
 \theoremstyle{thmstyleone}%
 \newtheorem{proposition}{Proposition}%
-\newtheorem{lemma}{Lemma}%
+\newtheorem{corollary}{Corollary}%
+\theoremstyle{thmstyletwo}%
+\newtheorem{remark}{Remark}%
 \theoremstyle{thmstylethree}%
 \newtheorem{definition}{Definition}%
+
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Var}{\operatorname{Var}}
+\newcommand{\Cov}{\operatorname{Cov}}
 
 \raggedbottom
 
 \begin{document}
 
-%% Title: concise and informative
-\title[Short running title]{Full Article Title}
+\title[Inequality measurement with machine-learning poverty maps]{Predicted welfare is too equal: inequality and poverty measurement with machine-learning poverty maps}
 
 \author*[1]{\fnm{Quang-Vinh} \sur{Dang}}\email{vinh.dq4@buv.edu.vn}
-%% ORCID: 0000-0002-3877-8024 (also enter in the submission system)
 
 \affil*[1]{\orgname{British University Vietnam}, \orgaddress{\city{Hung Yen}, \country{Vietnam}}}
 
-%% Abstract: 150--250 words, no undefined abbreviations, no citations
-\abstract{Abstract text (150--250 words). State the question, the data, the
-inequality concept and measure used, the identification or decomposition
-strategy, the main quantitative findings, and the policy implication.}
+\abstract{%
+%%ABSTRACT%%
+}
 
-%% 4--6 keywords
-\keywords{Inequality, Keyword 2, Keyword 3, Keyword 4}
+\keywords{Inequality measurement, Poverty mapping, Machine learning, Satellite data, Lorenz dominance, Inequality of opportunity}
 
-%% JEL codes (https://www.aeaweb.org/jel/guide/)
-\pacs[JEL Classification]{D31, D63, I32}
+\pacs[JEL Classification]{D31, D63, I32, C55, O15}
 
 \maketitle
 
-%% Headings: decimal system, at most three levels
+%% ======================================================================
 \section{Introduction}\label{sec:intro}
 
-Motivation, research question, contribution relative to the literature,
-and a preview of results. Cite by name and year, e.g.\ inequality
-measurement builds on \citet{atkinson1970} and \citet{cowell2011}
-\citep[see also][]{shorrocks1980}.
+Poverty maps built from satellite imagery, mobile phone records and other ``big data'' sources now cover almost every low- and middle-income country at a resolution of a few square kilometres \citep{jean2016,blumenstock2015,yeh2020,chi2022}. They are used to allocate cash transfers \citep{aiken2022,smythe2022}, to evaluate programmes \citep{ratledge2022}, and increasingly to describe the spatial distribution of living standards itself, including inequality \citep{pradhan2025}. The appeal is clear. Household surveys are expensive, infrequent and too small to describe districts or villages, while the predictors used by these models are available everywhere.
 
+This paper is about a simple property of the numbers these maps contain. A machine-learning poverty map reports, for each location or household, a prediction of welfare given observed features: an estimate of the conditional mean $\E[Y\mid X]$. A conditional mean is less dispersed than the variable it predicts. The difference is not noise that averages out. By the law of iterated expectations, true welfare is a mean-preserving spread of its conditional mean, so the distribution of predictions Lorenz-dominates the distribution of welfare. Every inequality index that respects the Lorenz order is therefore smaller when computed on the map than in the population, and the same is true of poverty measures that are sensitive to the depth of poverty. When predictions are also shrunk towards the mean, as regularised and ensemble learners typically do, the understatement grows.
+
+The point has a long history in small area estimation. \citet{ell2003} built their poverty mapping method around it: rather than plugging predicted means into poverty and inequality formulas, they simulate household welfare by adding draws of the prediction error, precisely because plug-in predictions would compress the distribution. \citet{tarozzi2009} and \citet{molina2010} study the conditions under which such simulation is valid. The machine-learning poverty mapping literature has largely moved away from this practice, publishing point predictions and validating them with correlation coefficients or $R^2$. \citet{corral2025} show, using Mexican census data, that machine-learning poverty maps produce more biased poverty rates than traditional small area estimation, especially in the poorest areas. To our knowledge no paper characterises the bias in \emph{inequality} measures computed from such maps, gives its sign and size, or evaluates corrections for it.
+
+We make four contributions. First, we give a general result: for any Lorenz-consistent inequality index and for the FGT poverty measures with $\alpha \geq 1$, the index computed on conditional-mean predictions is a lower bound for the index computed on welfare (Proposition~\ref{prop:lorenz}). Second, for the mean log deviation and the Theil index the gap is exactly the expected within-cell inequality, with population and income-share weights respectively (Proposition~\ref{prop:decomp}). This makes the connection with the measurement of inequality of opportunity explicit. The inequality of a poverty map is the ex-ante inequality of opportunity of \citet{ferreira2011}, with satellite or phone features in the role of circumstances, and it is a lower bound on total inequality for the same reason that ex-ante inequality of opportunity is a lower bound on inequality. A lognormal example gives a closed form (Proposition~\ref{prop:lognormal}): with a predictive $R^2$ of 0.4 in logs, which is typical of satellite models, the Gini coefficient of the predictions is about two-thirds of the true Gini. Third, we show that recalibrating predictions to fix their mean dispersion, as has been proposed to undo attenuation bias in impact evaluations, can at best recover the inequality of the oracle conditional mean, never total inequality (Proposition~\ref{prop:shrink}). Fourth, we evaluate four corrections that simulate from an estimated conditional distribution rather than plugging in a conditional mean: homoskedastic residual simulation in the spirit of \citet{ell2003}, quantile regression forests \citep{meinshausen2006}, and a residual bootstrap within bins of the prediction.
+
+The empirical analysis has three parts. A Monte Carlo study verifies the propositions and measures the bias of plug-in and corrected estimators across a grid of predictive accuracy and sample size. A design-based validation uses the 2023 American Community Survey (ACS) as a pseudo-census of 1.3 million households: we draw survey-like samples, train the models, predict welfare for areas outside the sample, and compare the estimated area-level inequality and poverty with the truth. Finally, we apply the analysis to the satellite-based poverty maps of \citet{yeh2020}, which predict an asset index for 19{,}669 survey clusters in 23 African countries from public Landsat and night-light imagery.
+
+%%RESULTS_INTRO%%
+
+The rest of the paper is organised as follows. Section~\ref{sec:lit} relates the paper to the literature. Section~\ref{sec:theory} presents the theoretical results and Section~\ref{sec:estimators} the estimators. Section~\ref{sec:mc} reports the Monte Carlo evidence, Section~\ref{sec:acs} the design-based validation and Section~\ref{sec:sat} the satellite application. Section~\ref{sec:conclusion} concludes.
+
+%% ======================================================================
 \section{Related literature}\label{sec:lit}
 
-\section{Measurement framework}\label{sec:framework}
+\paragraph{Small area estimation of poverty and inequality.}
+Poverty mapping combines a survey, in which welfare is observed, with a census or another source in which only predictors are observed. The method of \citet{ell2003} fits a model of log consumption on household characteristics in the survey, with a location effect, and simulates consumption for every census household by drawing both the location effect and the household error. Poverty and inequality indices are computed on each simulated census and averaged. \citet{tarozzi2009} show that the method relies on the assumption that the model estimated at a higher level of aggregation holds within small areas, and that standard errors can be badly understated when it does not. \citet{molina2010} propose the empirical best predictor under a nested error model, which uses survey information on sampled areas more efficiently. All of this work takes for granted that indices must be computed on simulated welfare rather than on predicted means. Our Propositions~\ref{prop:lorenz} and~\ref{prop:decomp} formalise why, and quantify what is lost when this step is skipped.
 
-\begin{definition}[Gini coefficient]
-For incomes $y_1,\dots,y_n$ with mean $\mu$,
+\paragraph{Machine-learning poverty maps.}
+\citet{jean2016} showed that features extracted from daytime satellite imagery by a convolutional network predict cluster-level consumption and assets in five African countries. \citet{blumenstock2015} did the same with mobile phone metadata. \citet{yeh2020} extended the approach to 23 countries using public Landsat imagery, and \citet{chi2022} produced the Relative Wealth Index, a micro-estimate of wealth for every 2.4~km grid cell in 135 countries. These maps are evaluated by the correlation between predictions and survey values, and the predictive $R^2$ of the best models is typically between 0.5 and 0.75 for asset indices and lower for consumption. \citet{aiken2023} document that errors in satellite poverty maps differ between urban and rural areas, with consequences for targeting. \citet{corral2025} compare machine-learning and model-based poverty maps against a census benchmark and find that, for a given covariate set, machine learning produces more biased poverty rates, with the largest errors in the poorest areas. \citet{ratledge2022} note that predictions are shrunk towards the mean, which attenuates estimated treatment effects when the prediction is used as an outcome. A recent line of work proposes recalibrating predictions to undo this shrinkage. We show that for inequality measurement such recalibration is insufficient.
+
+\paragraph{Inequality of opportunity.}
+The ex-ante approach to measuring inequality of opportunity \citep{roemer1998,ferreira2011} computes inequality on the conditional mean of an outcome given circumstances, which by construction removes inequality within types. \citet{brunori2023} estimate the conditional mean with regression trees and forests to limit ad hoc model selection. The estimated ex-ante inequality of opportunity is a lower bound for the contribution of circumstances because the set of observed circumstances is incomplete. The same mathematical object, inequality of a conditional mean, appears in poverty mapping, but its interpretation there is different. In inequality of opportunity the within-type component is excluded on purpose. In poverty mapping it is part of the target, and excluding it is an error.
+
+%% ======================================================================
+\section{Theory}\label{sec:theory}
+
+\subsection{Setup}\label{sec:setup}
+
+Let $Y>0$ denote welfare (consumption, income or a positive transformation of an asset index) in a population, with finite mean $\mu=\E[Y]$, and let $X$ be a vector of predictors. The conditional mean is $m(X)=\E[Y\mid X]$, so that $\E[m(X)]=\mu$. A poverty map reports a prediction $\hat m(X)$, an estimate of $m(X)$, for every unit. The ``naive'' or plug-in estimator of an inequality index $I$ is $I(\hat m(X))$, computed on the distribution of predictions over the target population.
+
+An inequality index $I$ is \emph{Lorenz-consistent} if it is symmetric, scale invariant and satisfies the Pigou--Dalton transfer principle. By \citet{atkinson1970} and \citet{dasgupta1973}, for two distributions with Lorenz curves $L_A$ and $L_B$, $L_A(p)\geq L_B(p)$ for all $p\in[0,1]$ implies $I(A)\leq I(B)$ for every Lorenz-consistent $I$. The Gini coefficient, the generalised entropy family $GE(\theta)$, which includes the mean log deviation ($MLD=GE(0)$) and the Theil index ($T=GE(1)$), and the Atkinson indices are Lorenz-consistent. The Foster--Greer--Thorbecke poverty measures \citep{fgt1984} for a poverty line $z$ are $P_\alpha(Y)=\E[((z-Y)_+/z)^\alpha]$, with the headcount ratio for $\alpha=0$.
+
+\subsection{Main results}\label{sec:props}
+
+\begin{proposition}[Lorenz dominance of predicted welfare]\label{prop:lorenz}
+Let $m(X)=\E[Y\mid X]$. Then
+\begin{enumerate}
+\item[(i)] $L_{m(X)}(p)\geq L_Y(p)$ for all $p\in[0,1]$, and therefore $I(m(X))\leq I(Y)$ for every Lorenz-consistent index $I$, with equality for strictly Schur-convex indices if and only if $Y=m(X)$ almost surely;
+\item[(ii)] $P_\alpha(m(X))\leq P_\alpha(Y)$ for every poverty line $z$ and every $\alpha\geq 1$;
+\item[(iii)] the sign of $P_0(m(X))-P_0(Y)$ is not determined in general.
+\end{enumerate}
+\end{proposition}
+
+\begin{proof}
+Write $Y=m(X)+\varepsilon$. Since $\E[\varepsilon\mid X]=0$, also $\E[\varepsilon\mid m(X)]=0$, so $Y$ is a mean-preserving spread of $m(X)$ in the sense of \citet{rothschild1970}. By the conditional Jensen inequality, $\E[\phi(Y)]=\E[\E[\phi(Y)\mid X]]\geq \E[\phi(m(X))]$ for every convex $\phi$; that is, $Y$ dominates $m(X)$ in the convex order. For two distributions with the same mean, convex-order dominance is equivalent to Lorenz dominance \citep{atkinson1970}, which gives the first part of (i). The second part follows from the definition of Lorenz consistency and, for the equality case, from the fact that a strictly Schur-convex index is unchanged by a mean-preserving spread only if the spread is degenerate. For (ii), $\phi_\alpha(y)=((z-y)_+/z)^\alpha$ is convex in $y$ when $\alpha\geq 1$, and the same Jensen argument applies. For (iii), let $m(X)$ take the values $a$ and $b$ with equal probability, and let $Y\mid X$ have a symmetric two-point distribution around $m(X)$ with half-width $h$. If $z\in(a+h,b-h)$, then $P_0(m(X))=P_0(Y)=1/2$. If $z\in(a,a+h)$, then $P_0(m(X))=1/2$ and $P_0(Y)=1/4$, an overstatement. If $z\in(a-h,a)$, then $P_0(m(X))=0$ and $P_0(Y)=1/4$, an understatement.
+\end{proof}
+
+The headcount ratio is understated when the poverty line lies below most conditional means, which is the usual case for extreme poverty lines in middle-income settings, and can be overstated when the line lies above many of them. This ambiguity is consistent with the finding of \citet{corral2025} that machine-learning maps overestimate poverty in some areas and underestimate it in others.
+
+\begin{proposition}[The gap is within-cell inequality]\label{prop:decomp}
+Let $MLD(Y\mid X)=\log m(X)-\E[\log Y\mid X]$ and $T(Y\mid X)=\E[(Y/m(X))\log(Y/m(X))\mid X]$ denote the mean log deviation and the Theil index of the conditional distribution of $Y$ given $X$. Then
+\begin{align}
+MLD(Y) &= MLD(m(X)) + \E\left[MLD(Y\mid X)\right], \label{eq:mld}\\
+T(Y) &= T(m(X)) + \E\left[\frac{m(X)}{\mu}\,T(Y\mid X)\right]. \label{eq:theil}
+\end{align}
+For the variance of logarithms, with $m_\ell(X)=\E[\log Y\mid X]$ and $R^2_\ell$ the population $R^2$ of $\log Y$ on $X$,
 \begin{equation}
-G = \frac{1}{2n^2\mu}\sum_{i=1}^{n}\sum_{j=1}^{n}\lvert y_i - y_j\rvert .
-\label{eq:gini}
+\Var(\log Y)=\Var(m_\ell(X))+\E[\Var(\log Y\mid X)], \qquad \Var(m_\ell(X))=R^2_\ell\,\Var(\log Y). \label{eq:varlog}
 \end{equation}
-\end{definition}
+\end{proposition}
 
-\section{Data}\label{sec:data}
+\begin{proof}
+$MLD(Y)=\log\mu-\E[\log Y]$ and $MLD(m(X))=\log\mu-\E[\log m(X)]$, because both distributions have mean $\mu$. The difference is $\E[\log m(X)-\log Y]=\E[\log m(X)-\E[\log Y\mid X]]=\E[MLD(Y\mid X)]$, which is (\ref{eq:mld}). For the Theil index, $T(Y)-T(m(X))=\mu^{-1}\E[Y\log Y-m(X)\log m(X)]$, since the terms in $\log\mu$ cancel. Conditioning on $X$, $\E[Y\log Y\mid X]-m(X)\log m(X)=m(X)\,\E[(Y/m(X))\log(Y/m(X))\mid X]=m(X)\,T(Y\mid X)$, which gives (\ref{eq:theil}). Equation (\ref{eq:varlog}) is the law of total variance.
+\end{proof}
 
-\section{Results}\label{sec:results}
+Equations (\ref{eq:mld}) and (\ref{eq:theil}) are the between--within decompositions of \citet{bourguignon1979} and \citet{shorrocks1980}, applied to the partition of the population by values of $X$. The plug-in estimator retains the between-cell term and discards the within-cell term. The amount lost depends on how much welfare varies among units that look identical to the model, not on how well the model ranks units. A model can have a high correlation with welfare across clusters and still miss most of the inequality within them.
 
-Table~\ref{tab:summary} reports summary statistics.
+\begin{corollary}[Poverty-map inequality as ex-ante inequality of opportunity]\label{cor:iop}
+If $X$ is interpreted as a vector of circumstances, $I(m(X))$ is the ex-ante parametric or non-parametric measure of inequality of opportunity of \citet{ferreira2011}, and $I(m(X))/I(Y)$ is the share of inequality explained by $X$. Inequality computed on a poverty map is therefore the inequality of opportunity associated with the features the map is built from, and is a lower bound on total inequality.
+\end{corollary}
 
-\begin{table}[ht]
-\caption{Summary statistics}\label{tab:summary}%
-\begin{tabular}{@{}lccc@{}}
-\toprule
-Variable & Mean & SD & $N$\\
-\midrule
-Household income\footnotemark[1] & -- & -- & --\\
-Gini coefficient & -- & -- & --\\
-\botrule
-\end{tabular}
-\footnotetext{Source: describe data source.}
-\footnotetext[1]{Per adult equivalent, constant prices.}
-\end{table}
+\begin{proposition}[Lognormal benchmark]\label{prop:lognormal}
+Suppose $\log Y=m_\ell(X)+u$, with $m_\ell(X)\sim N(\nu,R^2_\ell\sigma^2)$ and $u\mid X\sim N(0,(1-R^2_\ell)\sigma^2)$. Then $m(X)=\exp\{m_\ell(X)+(1-R^2_\ell)\sigma^2/2\}$ is lognormal with log standard deviation $\sigma\sqrt{R^2_\ell}$, and
+\begin{equation}
+G(Y)=2\Phi\left(\frac{\sigma}{\sqrt 2}\right)-1, \qquad G(m(X))=2\Phi\left(\frac{\sigma\sqrt{R^2_\ell}}{\sqrt 2}\right)-1, \qquad \frac{MLD(m(X))}{MLD(Y)}=R^2_\ell. \label{eq:lognormal}
+\end{equation}
+\end{proposition}
 
-\section{Robustness}\label{sec:robust}
+\begin{proof}
+The Gini coefficient of a lognormal distribution with log standard deviation $s$ is $2\Phi(s/\sqrt2)-1$ and its mean log deviation is $s^2/2$ \citep{cowell2011}. Apply these to $s=\sigma$ and $s=\sigma\sqrt{R^2_\ell}$.
+\end{proof}
 
+Table~\ref{tab:lognormal} evaluates (\ref{eq:lognormal}) for values of $\sigma$ that correspond to true Gini coefficients between 0.28 and 0.56. With $R^2_\ell=0.4$, the plug-in Gini is 33--36\% below the true Gini; with $R^2_\ell=0.8$, it is still 9--10\% below. The ratio $G(m)/G(Y)$ depends mainly on $R^2_\ell$ and only weakly on the level of inequality.
+
+\input{tab_lognormal}
+
+\begin{proposition}[Shrinkage and mean recalibration]\label{prop:shrink}
+Suppose $\hat m(X)=\mu+\lambda\,(m(X)-\mu)$ with $\lambda\in(0,1]$ and $\hat m(X)>0$. Then $G(\hat m(X))=\lambda\,G(m(X))\leq G(Y)$. If predictions are recalibrated by the linear projection of $Y$ on $\hat m(X)$, the recalibrated predictions equal $m(X)$, so that recalibration recovers at most $G(m(X))$ and never $G(Y)$ unless $Y=m(X)$.
+\end{proposition}
+
+\begin{proof}
+The Gini coefficient is half the mean absolute difference divided by the mean. Shrinkage multiplies all pairwise differences by $\lambda$ and leaves the mean unchanged, so it multiplies the Gini by $\lambda$. The inequality $\lambda G(m(X))\leq G(Y)$ follows from $\lambda\leq 1$ and Proposition~\ref{prop:lorenz}. The slope of the linear projection of $Y$ on $\hat m(X)$ is $\Cov(Y,\hat m)/\Var(\hat m)=\lambda\Cov(Y,m)/(\lambda^2\Var(m))=1/\lambda$, because $\Cov(Y,m)=\Var(m)$ when $m$ is the conditional mean; the intercept restores the mean $\mu$. The recalibrated prediction is therefore $\mu+(\hat m-\mu)/\lambda=m(X)$.
+\end{proof}
+
+Proposition~\ref{prop:shrink} describes the best case for recalibration. In practice the prediction error of a machine-learning model is not pure shrinkage. When $\hat m=m+\eta$ with estimation noise $\eta$, the projection slope is below one, and the mean-squared-error-optimal recalibration contracts the predictions further. The Monte Carlo evidence in Section~\ref{sec:mc} shows that this can make linear recalibration worse than doing nothing.
+
+%% ======================================================================
+\section{Estimators}\label{sec:estimators}
+
+The target of a poverty map that reports inequality is $I(F_Y)$, where $F_Y(y)=\int F(y\mid x)\,dF_X(x)$ is the welfare distribution in the target population. Propositions~\ref{prop:lorenz}--\ref{prop:shrink} show that this target depends on the whole conditional distribution $F(y\mid x)$, not only on its mean. All corrections we consider replace the prediction for each target unit by draws $y^*_{ir}$, $r=1,\dots,R$, from an estimate $\hat F(\cdot\mid X_i)$, compute the index on each simulated population, and average over $r$. We compare five estimators. All models are fitted to $\log Y$ in the training sample, and out-of-fold predictions and residuals are obtained by five-fold cross-fitting.
+
+\begin{description}
+\item[N (naive plug-in).] $I(\hat m(X))$, with $\hat m(X)=\exp\{\hat m_\ell(X)\}\cdot s$ and $s$ the smearing factor of \citet{duan1983}. This is the conditional mean prediction that poverty maps report.
+\item[C1 (mean recalibration).] The naive prediction is replaced by the fitted values of a linear regression of $Y$ on the out-of-fold naive predictions in the training sample. This mimics the linear calibration corrections proposed for attenuation bias.
+\item[C2 (homoskedastic residual simulation).] $y^*_{ir}=\exp\{\hat m_\ell(X_i)+e^*_{ir}\}$, where $e^*_{ir}$ is drawn with replacement from the pooled out-of-fold log residuals. This is the simulation step of \citet{ell2003} without a separate location effect.
+\item[C3 (quantile regression forest).] A quantile regression forest \citep{meinshausen2006} estimates 99 conditional quantiles of $\log Y$; $y^*_{ir}$ is the exponential of the quantile at a randomly drawn level. This allows the conditional distribution to vary with $X$ in a flexible way.
+\item[C4 (binned residual bootstrap).] As C2, but residuals are drawn only from training units in the same decile of the out-of-fold prediction. This allows heteroskedasticity along the dimension that matters most for inequality.
+\end{description}
+
+When the outcome is an asset index that takes negative values (Section~\ref{sec:sat}), the same estimators are applied in levels with additive residuals, and inequality is measured with translation-invariant indices: the absolute Gini (half the mean absolute difference), the standard deviation, the 90--10 percentile range, and the share of units below a fixed cut-off. For the absolute Gini and the standard deviation, Proposition~\ref{prop:lorenz} holds with the Lorenz order replaced by the convex order, because both are Schur-convex and translation invariant, and the absolute Gini satisfies the scaling result of Proposition~\ref{prop:shrink} without the requirement that $\hat m>0$. The percentile range and the share below a cut-off are not monotone in the convex order, and for them the direction of the bias is an empirical question.
+
+%% ======================================================================
+\section{Monte Carlo evidence}\label{sec:mc}
+
+\subsection{Design}\label{sec:mc_design}
+
+We draw ten correlated standard normal predictors with pairwise correlation 0.3 and generate
+\begin{equation*}
+\log Y = 10 + f(X) + s(X)\,\epsilon, \qquad \epsilon\sim N(0,1),
+\end{equation*}
+where $f$ combines linear terms with an interaction, a sine term and a quadratic term, scaled so that $\Var(f(X))=R^2_\ell\,\sigma^2$ with $\sigma^2=0.64$ (a true Gini of about 0.43). In the homoskedastic design $s(X)$ is constant. In the heteroskedastic design $s(X)\propto\exp(0.3X_5)$, normalised so that $\E[s(X)^2]=(1-R^2_\ell)\sigma^2$. The grid covers $R^2_\ell\in\{0.2,0.4,0.6,0.8\}$, training samples of 2{,}000 and 10{,}000 observations, and four learners: ordinary least squares and the lasso on $\log Y$, a random forest and gradient boosting (LightGBM). Each replication draws a new training sample and a new target population of 100{,}000 units; the poverty line is 60\% of the true median. We run eight replications per cell, with $R=50$ simulation draws for C2--C4. Because the data-generating process is known, we can also compute the oracle conditional mean $m(X)$.
+
+\subsection{Results}\label{sec:mc_results}
+
+The simulations confirm the propositions. In all 128 cell-replications the oracle index is below the true index for the Gini, MLD, Theil, Atkinson(1), FGT1 and FGT2. The gap between the true MLD and the oracle MLD equals the average within-cell MLD to within sampling error (0.1602 against 0.1600 on average), as Eq.~(\ref{eq:mld}) requires. In the lognormal benchmark the closed forms in Eq.~(\ref{eq:lognormal}) match Monte Carlo values to within 0.001.
+
+Table~\ref{tab:mc} reports the relative bias of each estimator for gradient boosting with 10{,}000 training observations in the heteroskedastic design, and Fig.~\ref{fig:mc} plots the bias of the Gini and the headcount against $R^2_\ell$. Three findings stand out.
+
+First, the plug-in bias is large and close to the oracle bias. At $R^2_\ell=0.4$ the plug-in Gini is 33\% below the truth, the MLD 57\% below and the headcount 75\% below; at $R^2_\ell=0.8$ the Gini is still 11\% too low. Almost all of this bias is already present in the oracle: the problem is the use of a conditional mean, not the quality of the learner. The headcount is strongly understated because, with a poverty line at 60\% of the median, few conditional means fall below the line.
+
+Second, mean recalibration (C1) does not fix the problem and often makes it worse. For gradient boosting at $R^2_\ell\leq 0.4$, the slope of the outcome on the out-of-fold prediction is below one (0.79 at $R^2_\ell=0.2$ and 0.90 at $R^2_\ell=0.4$), so recalibration contracts the predictions further and the Gini bias rises from $-33\%$ to $-38\%$. For OLS, the lasso and the random forest the slope exceeds one and recalibration stretches the predictions, but the corrected Gini remains about 30\% too low at $R^2_\ell=0.4$, as Proposition~\ref{prop:shrink} predicts.
+
+Third, the simulation estimators remove most of the bias. The binned residual bootstrap (C4) has a Gini bias below 1\% in absolute value and an MLD bias of at most 2\% at every $R^2_\ell$, and it is nearly unbiased for the three FGT measures. With gradient boosting, homoskedastic residual simulation (C2) overstates inequality and especially the depth of poverty when the predictive $R^2$ is low, because pooled residuals are too dispersed for the better-predicted part of the distribution; with the linear learners it understates the Gini by about 4\%. The quantile regression forest (C3) understates inequality by a few per cent, mainly because its predicted quantiles are smoothed within leaves and truncated at the 1st and 99th percentiles, which thins the tails. The binned bootstrap is the least biased estimator in the homoskedastic design as well, with 2{,}000 training observations, and with each of the other learners.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=\textwidth]{Fig1.pdf}
+\caption{Monte Carlo relative bias of (a) the Gini coefficient and (b) the poverty headcount FGT(0), by target $R^2$ of log welfare. Heteroskedastic design, gradient boosting with 10{,}000 training observations. Circles: plug-in (N); squares: mean recalibration (C1); triangles: homoskedastic residual simulation (C2); diamonds: quantile regression forest (C3); inverted triangles: binned residual bootstrap (C4)}\label{fig:mc}
+\end{figure}
+
+\input{tab_mc}
+
+
+%% ======================================================================
+\section{Design-based validation with the American Community Survey}\label{sec:acs}
+
+%%SECTION_ACS%%
+
+%% ======================================================================
+\section{Satellite poverty maps in Africa}\label{sec:sat}
+
+%%SECTION_SAT%%
+
+%% ======================================================================
 \section{Conclusion}\label{sec:conclusion}
+
+%%SECTION_CONCLUSION%%
 
 \backmatter
 
 \bmhead{Supplementary information}
-Online Resource 1 (ESM\_1.pdf) contains the online appendix.
-
-\bmhead{Acknowledgements}
-Acknowledgements (people, grants; funding organisations written in full).
+Online Resource 1 contains the replication package description and additional tables.
 
 \section*{Statements and Declarations}
 
@@ -110,25 +225,16 @@ No funding was received for conducting this study.
 The author has no relevant financial or non-financial interests to disclose.
 
 \bmhead{Ethics approval and consent}
-Not applicable.
+Not applicable. The study uses only publicly available, anonymised secondary data.
 
 \bmhead{Data availability}
-Describe how to access the data. In line with the Journal of Economic
-Inequality Information Deposit Policy, replication files (data sets, code,
-full list of data sources, and a README) will be deposited in a public
-repository (e.g.\ openICPSR, Zenodo, Harvard Dataverse) upon acceptance.
+All data are publicly available. The 2023 American Community Survey Public Use Microdata Sample is distributed by the U.S. Census Bureau (\url{https://www2.census.gov/programs-surveys/acs/data/pums/2023/1-Year/}). The cluster-level asset index and satellite image histograms are those released by \citet{yeh2020} (\url{https://github.com/sustainlab-group/africa_poverty}). In line with the Journal of Economic Inequality Information Deposit Policy, the code that downloads the data and reproduces every table and figure, together with a list of data sources and a README, will be deposited in a public repository upon acceptance.
 
 \bmhead{Code availability}
-Replication code will be deposited together with the data.
+The replication code will be deposited together with the data description.
 
 \bmhead{Author contributions}
-Quang-Vinh Dang: conceptualization, methodology, formal analysis,
-writing---original draft, writing---review and editing.
-
-\begin{appendices}
-\section{Additional results}\label{secA1}
-%% Appendix figures continue the main-text numbering (Fig. 3, not Fig. A1).
-\end{appendices}
+Quang-Vinh Dang: conceptualization, methodology, software, formal analysis, writing---original draft, writing---review and editing.
 
 \bibliography{references}
 
