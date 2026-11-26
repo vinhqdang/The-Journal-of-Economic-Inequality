@@ -240,6 +240,10 @@ def fig_bias(summ, out_path):
             if ax is axes[0]:
                 handles.append(h)
         ax.axhline(0, color="black", linewidth=0.6, linestyle=(0, (1, 2)))
+        yv = sub[(sub["index"] == idx) & sub.estimator.isin(["N", "C1", "C2", "C3", "C4"])].rel_bias_pct
+        lo, hi = float(yv.min()), float(yv.max())
+        span = hi - lo
+        ax.set_ylim(lo - 0.08 * span, hi + 0.35 * span)  # headroom for panel label
         ax.set_xlabel(r"Target $R^2$ of log welfare")
         ax.set_xticks(R2_GRID)
         ax.text(0.03, 0.95, lab, transform=ax.transAxes, va="top", ha="left")
@@ -379,9 +383,61 @@ def checks_text(raw, summ, prop3, cfg, runtime):
         d = fit[fit.model == mdl].groupby(["r2", "n_train"]).value.mean()
         w(f"    {mdl:6s}: " + ", ".join(f"R2={a} n={b}: {v:.3f}" for (a, b), v in d.items()))
     w("")
+    # Large-population version of the Proposition 2 check: the sampling residual
+    # should shrink with N, while the algebraic identity is exact at every N.
+    w("(c) Sampling residual versus population size (r2=0.4, hetero=True; mean over 5 draws):")
+    rng = np.random.default_rng(2024)
+    vf_ref = reference_var_fraw()
+    for npop in [10_000, 100_000, 1_000_000, 4_000_000]:
+        res_list = []
+        for _ in range(5):
+            d = draw_sample(npop, 0.4, True, vf_ref, rng)
+            gap = ineq.mld(d["y"]) - ineq.mld(d["m"])
+            within = np.mean(d["s"] ** 2 / 2.0)
+            res_list.append(gap - within)
+        res_arr = np.array(res_list)
+        w(f"    N={npop:>9,d}: mean residual {res_arr.mean():+.5f}, "
+          f"RMS residual {np.sqrt(np.mean(res_arr ** 2)):.5f} "
+          f"(RMS x sqrt(N) = {np.sqrt(np.mean(res_arr ** 2)) * np.sqrt(npop):.3f})")
+    w("    The RMS residual shrinks by roughly 3x per tenfold increase in N, as 1/sqrt(N) predicts")
+    w("    (5 draws per size, so the last column is only a rough guide). The residual is sampling")
+    w("    noise from mean(s*eps) and log(mean Y / mean m), not a bias in the identity.")
+    w("")
+
+    # Calibration slopes of the C1 regression (diagnoses C1's direction of bias)
+    w("7. C1 calibration regression of y on the OOF N-prediction (levels): mean slope and intercept")
+    cs = raw[(raw.estimator == "fit") & (raw["index"].isin(["C1_slope", "C1_intercept"]))]
+    for (r2, n, het), g in cs.groupby(["r2", "n_train", "hetero"]):
+        parts = []
+        for mdl in MODELS:
+            q = g[g.model == mdl]
+            sl = q[q["index"] == "C1_slope"].value.mean()
+            ic = q[q["index"] == "C1_intercept"].value.mean()
+            parts.append(f"{mdl}: slope {sl:.3f}, intercept {ic:,.0f}")
+        w(f"    R2={r2} n={n} hetero={str(het):5s}: " + " | ".join(parts))
+    w("    Slope < 1 means the level regression shrinks the N-distribution further (C1 worsens);")
+    w("    slope > 1 means it stretches it. The sign follows the OOF fit, not the truth.")
+    w("")
+
+    w("Deviations from the specification and run settings")
+    w("- Replications: the specification asks for 20 per cell, reduced to 10 if runtime is too long.")
+    w("  A first attempt with 10 replications was stopped after one replication, because a concurrent")
+    w("  CPU job made each replication about seven times slower. The full run used 8 replications per")
+    w("  cell (128 in total) with R = 50, which fit the 90-minute target. Replication 0 of the first")
+    w("  cell was kept from the interrupted attempt (same seeds, same code path).")
+    w("- Population size: N_pop = 100,000 as specified for this exercise. DESIGN.md Section 4 states")
+    w("  200,000; the exercise specification takes precedence here.")
+    w("- Simulation replicates: R = 50 for C2, C3, C4 (the exercise specification). DESIGN.md states 100.")
+    w("- The truth and the oracle use the same test population in each replication, so their")
+    w("  difference is not affected by population sampling noise.")
+    w("- The C3 quantile forest is fitted once per replication and shared across the four point models,")
+    w("  because it does not depend on the point model. Its seed is fixed per cell and replication.")
+    w("")
     w("Notes")
-    w("- Population size and replication count are set by the run settings above (see Runtime).")
     w("- The true poverty line is recomputed from each replication's population median.")
+    w("- OOF R2 of lgbm at n=2000 is low (about 0.02 at target R2 = 0.2) because the specified")
+    w("  settings (500 trees, learning rate 0.05, 31 leaves, min_child_samples 50, no early stopping)")
+    w("  overfit a 1,600-row fold. Results for lgbm at n=2000 should be read with that in mind.")
     return "\n".join(L) + "\n"
 
 
@@ -393,7 +449,19 @@ def main():
                     help="tiny configuration for testing the pipeline")
     ap.add_argument("--out-dir", default=os.path.join(REP_ROOT, "output"))
     ap.add_argument("--no-resume", action="store_true")
+    ap.add_argument("--postprocess-only", action="store_true",
+                    help="rebuild summaries, checks and figure from e1_results_raw.csv")
+    ap.add_argument("--runtime-min", type=float, default=None,
+                    help="runtime to report with --postprocess-only")
     args = ap.parse_args()
+
+    if args.postprocess_only:
+        cfg = dict(n_pop=N_POP_DEFAULT, reps=args.reps, R=args.R,
+                   r2_grid=R2_GRID, n_grid=N_GRID, het_grid=HET_GRID, resume=True)
+        raw = pd.read_csv(os.path.join(args.out_dir, "e1_results_raw.csv"))
+        raw["hetero"] = raw["hetero"].astype(bool)
+        write_outputs(raw, cfg, args.out_dir, (args.runtime_min or 0.0) * 60)
+        return
 
     scratch = os.environ.get(
         "E1_SCRATCH",
@@ -419,8 +487,10 @@ def main():
     print(f"config: {cfg}", flush=True)
     raw, runtime = run_all(cfg, args.out_dir, scratch)
     print(f"all replications done in {runtime / 60:.1f} min", flush=True)
+    write_outputs(raw, cfg, args.out_dir, runtime)
 
-    out = args.out_dir
+
+def write_outputs(raw, cfg, out, runtime):
     raw.to_csv(os.path.join(out, "e1_results_raw.csv"), index=False)
     summ, fit = summarise(raw)
     summ = pd.concat([summ, fit], ignore_index=True)

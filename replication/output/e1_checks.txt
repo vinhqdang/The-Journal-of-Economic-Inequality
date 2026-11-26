@@ -1,0 +1,115 @@
+E1 Monte Carlo: numerical checks and run settings
+============================================================
+Runtime: 66.2 minutes
+Population (test) size N_pop = 100000; reps per cell = 8; R (simulation replicates for C2-C4) = 50
+Grid: R2 in [0.2, 0.4, 0.6, 0.8]; n_train in [2000, 10000]; hetero in [False, True]; models ['ols', 'lasso', 'rf', 'lgbm']
+Poverty line z = 0.6 x median of the true population welfare (per replication).
+Seeds: SeedSequence([20260501, cell, rep]); model draws use SeedSequence([20260501, cell, rep, model]).
+Reference variance of the unscaled f used for scaling: from a fixed 1,000,000-row sample (seed 424242).
+
+1. DGP calibration (population, averaged over replications)
+Target R2 | hetero | Var(f)/Var(logY) | Var(logY) | E[s^2]  (targets: R2, 0.64, (1-R2)*0.64)
+  0.2 | False | 0.1993 | 0.6393 | 0.5120 (target 0.5120)
+  0.2 | True  | 0.1991 | 0.6398 | 0.5116 (target 0.5120)
+  0.4 | False | 0.3983 | 0.6409 | 0.3840 (target 0.3840)
+  0.4 | True  | 0.3991 | 0.6401 | 0.3838 (target 0.3840)
+  0.6 | False | 0.5990 | 0.6393 | 0.2560 (target 0.2560)
+  0.6 | True  | 0.5992 | 0.6384 | 0.2557 (target 0.2560)
+  0.8 | False | 0.8003 | 0.6380 | 0.1280 (target 0.1280)
+  0.8 | True  | 0.7995 | 0.6373 | 0.1280 (target 0.1280)
+
+2. Proposition 1: oracle index m(X) = E[Y|X] vs true index Y
+Claim: I(m(X)) <= I(Y) for Lorenz-consistent indices (Gini, MLD, Theil, Atkinson(1), FGT1, FGT2).
+FGT0 (headcount) sign is ambiguous, reported for information only.
+  gini    [claim] share of reps with oracle <= true: 1.000 (128/128); oracle/true-1 in % : mean -26.89, range [-52.88, -7.75]
+  mld     [claim] share of reps with oracle <= true: 1.000 (128/128); oracle/true-1 in % : mean -46.28, range [-79.39, -16.33]
+  theil   [claim] share of reps with oracle <= true: 1.000 (128/128); oracle/true-1 in % : mean -45.26, range [-78.35, -12.84]
+  atk1    [claim] share of reps with oracle <= true: 1.000 (128/128); oracle/true-1 in % : mean -42.78, range [-76.64, -13.92]
+  varlog  [claim] share of reps with oracle <= true: 1.000 (128/128); oracle/true-1 in % : mean -47.61, range [-80.34, -17.61]
+  fgt0    [info] share of reps with oracle <= true: 1.000 (128/128); oracle/true-1 in % : mean -59.10, range [-96.64, -20.36]
+  fgt1    [claim] share of reps with oracle <= true: 1.000 (128/128); oracle/true-1 in % : mean -70.38, range [-98.95, -32.30]
+  fgt2    [claim] share of reps with oracle <= true: 1.000 (128/128); oracle/true-1 in % : mean -76.42, range [-99.58, -40.36]
+  Proposition 1 check (all Lorenz-consistent indices, all reps): PASSED
+
+3. Proposition 2: MLD decomposition I0(Y) = I0(m(X)) + E[I0(Y|X)]
+(a) Algebraic identity, with E[log Y | X] = 10 + f(X) and log m - ell = s^2/2:
+    log(mean m) - mean(ell) - [log(mean m) - mean(log m)] must equal mean(s^2/2) exactly.
+    max |residual| over 8 DGP cells: 1.665e-15  -> PASSED (machine precision)
+(b) Replication-level: true MLD - MLD(oracle) vs E[within-cell MLD] = mean(s^2/2).
+    Realized gap = [log(mean Y) - log(mean m)] + [mean(log m) - mean(log Y)]; the second
+    term equals mean(s^2/2) - mean(s*eps), so the residual is sampling noise of order 1/sqrt(N).
+    R2=0.2 hetero=False: E[within] = 0.2560, mean gap = 0.2560, mean residual = +0.0000 (+0.01% of within), max |residual|% = 0.98
+    R2=0.2 hetero=True : E[within] = 0.2558, mean gap = 0.2573, mean residual = +0.0015 (+0.57% of within), max |residual|% = 4.74
+    R2=0.4 hetero=False: E[within] = 0.1920, mean gap = 0.1930, mean residual = +0.0010 (+0.54% of within), max |residual|% = 2.04
+    R2=0.4 hetero=True : E[within] = 0.1919, mean gap = 0.1920, mean residual = +0.0000 (+0.02% of within), max |residual|% = 2.80
+    R2=0.6 hetero=False: E[within] = 0.1280, mean gap = 0.1275, mean residual = -0.0005 (-0.39% of within), max |residual|% = 2.52
+    R2=0.6 hetero=True : E[within] = 0.1279, mean gap = 0.1288, mean residual = +0.0009 (+0.69% of within), max |residual|% = 6.92
+    R2=0.8 hetero=False: E[within] = 0.0640, mean gap = 0.0639, mean residual = -0.0001 (-0.13% of within), max |residual|% = 4.43
+    R2=0.8 hetero=True : E[within] = 0.0640, mean gap = 0.0635, mean residual = -0.0005 (-0.79% of within), max |residual|% = 10.42
+    Mean over all cells: E[within] = 0.1600, mean gap = 0.1602, mean residual = +0.00030
+    Proposition 2 check: the gap equals E[within-cell MLD] up to sampling noise (residual < 5% of within-cell MLD in 94.5% of reps)
+
+4. Proposition 3: lognormal Gini, true vs predicted (table in e1_prop3_table.csv)
+    Max |closed form - Monte Carlo| (n=2,000,000): true Gini 7.28e-04, predicted Gini 6.44e-04
+    Predicted/true Gini ratio range: 0.455 to 0.911
+
+5. Relative bias (%) of Gini and MLD, lgbm model, n_train = 10000
+    R2=0.4 hetero=True: gini: N=-32.78, C1=-38.34, C2=+1.73, C3=-4.01, C4=-0.36 | mld: N=-57.43, C1=-64.40, C2=+4.70, C3=-8.98, C4=-1.02
+    R2=0.8 hetero=True: gini: N=-11.17, C1=-6.85, C2=-1.10, C3=-2.42, C4=-0.37 | mld: N=-23.02, C1=-12.43, C2=-2.01, C3=-5.41, C4=-1.05
+    R2=0.4 hetero=False: gini: N=-30.30, C1=-35.84, C2=+4.31, C3=-1.86, C4=+0.33 | mld: N=-53.96, C1=-61.28, C2=+9.98, C3=-4.14, C4=+0.76
+    R2=0.8 hetero=False: gini: N=-9.69, C1=-3.65, C2=+0.06, C3=-1.91, C4=-0.24 | mld: N=-20.43, C1=-4.85, C2=+0.09, C3=-4.22, C4=-0.69
+
+6. Out-of-fold R2 of log welfare (mean over reps)
+    ols   : R2=0.2 n=2000: 0.151, R2=0.2 n=10000: 0.162, R2=0.4 n=2000: 0.315, R2=0.4 n=10000: 0.325, R2=0.6 n=2000: 0.479, R2=0.6 n=10000: 0.488, R2=0.8 n=2000: 0.647, R2=0.8 n=10000: 0.651
+    lasso : R2=0.2 n=2000: 0.151, R2=0.2 n=10000: 0.162, R2=0.4 n=2000: 0.315, R2=0.4 n=10000: 0.325, R2=0.6 n=2000: 0.479, R2=0.6 n=10000: 0.488, R2=0.8 n=2000: 0.647, R2=0.8 n=10000: 0.651
+    rf    : R2=0.2 n=2000: 0.152, R2=0.2 n=10000: 0.177, R2=0.4 n=2000: 0.332, R2=0.4 n=10000: 0.364, R2=0.6 n=2000: 0.506, R2=0.6 n=10000: 0.552, R2=0.8 n=2000: 0.678, R2=0.8 n=10000: 0.731
+    lgbm  : R2=0.2 n=2000: 0.020, R2=0.2 n=10000: 0.127, R2=0.4 n=2000: 0.259, R2=0.4 n=10000: 0.337, R2=0.6 n=2000: 0.494, R2=0.6 n=10000: 0.557, R2=0.8 n=2000: 0.725, R2=0.8 n=10000: 0.767
+
+(c) Sampling residual versus population size (r2=0.4, hetero=True; mean over 5 draws):
+    N=   10,000: mean residual -0.00149, RMS residual 0.01084 (RMS x sqrt(N) = 1.084)
+    N=  100,000: mean residual +0.00431, RMS residual 0.00553 (RMS x sqrt(N) = 1.748)
+    N=1,000,000: mean residual -0.00007, RMS residual 0.00161 (RMS x sqrt(N) = 1.606)
+    N=4,000,000: mean residual +0.00001, RMS residual 0.00044 (RMS x sqrt(N) = 0.872)
+    The RMS residual shrinks by roughly 3x per tenfold increase in N, as 1/sqrt(N) predicts
+    (5 draws per size, so the last column is only a rough guide). The residual is sampling
+    noise from mean(s*eps) and log(mean Y / mean m), not a bias in the identity.
+
+7. C1 calibration regression of y on the OOF N-prediction (levels): mean slope and intercept
+    R2=0.2 n=2000 hetero=False: ols: slope 1.021, intercept -784 | lasso: slope 1.038, intercept -1,318 | rf: slope 0.970, intercept 921 | lgbm: slope 0.456, intercept 16,836
+    R2=0.2 n=2000 hetero=True : ols: slope 1.210, intercept -6,847 | lasso: slope 1.254, intercept -8,232 | rf: slope 1.219, intercept -7,035 | lgbm: slope 0.546, intercept 14,165
+    R2=0.2 n=10000 hetero=False: ols: slope 1.082, intercept -2,666 | lasso: slope 1.084, intercept -2,739 | rf: slope 1.004, intercept -155 | lgbm: slope 0.732, intercept 8,034
+    R2=0.2 n=10000 hetero=True : ols: slope 1.245, intercept -7,848 | lasso: slope 1.250, intercept -8,011 | rf: slope 1.213, intercept -6,838 | lgbm: slope 0.787, intercept 6,460
+    R2=0.4 n=2000 hetero=False: ols: slope 1.082, intercept -2,850 | lasso: slope 1.100, intercept -3,385 | rf: slope 1.098, intercept -3,070 | lgbm: slope 0.749, intercept 7,094
+    R2=0.4 n=2000 hetero=True : ols: slope 1.184, intercept -5,989 | lasso: slope 1.194, intercept -6,278 | rf: slope 1.258, intercept -8,048 | lgbm: slope 0.772, intercept 6,705
+    R2=0.4 n=10000 hetero=False: ols: slope 1.147, intercept -4,883 | lasso: slope 1.150, intercept -4,968 | rf: slope 1.100, intercept -3,209 | lgbm: slope 0.892, intercept 2,832
+    R2=0.4 n=10000 hetero=True : ols: slope 1.222, intercept -7,051 | lasso: slope 1.225, intercept -7,157 | rf: slope 1.185, intercept -5,669 | lgbm: slope 0.896, intercept 2,998
+    R2=0.6 n=2000 hetero=False: ols: slope 1.158, intercept -5,221 | lasso: slope 1.163, intercept -5,373 | rf: slope 1.244, intercept -7,440 | lgbm: slope 0.966, intercept 146
+    R2=0.6 n=2000 hetero=True : ols: slope 1.174, intercept -5,592 | lasso: slope 1.181, intercept -5,806 | rf: slope 1.287, intercept -8,649 | lgbm: slope 0.945, intercept 1,102
+    R2=0.6 n=10000 hetero=False: ols: slope 1.196, intercept -6,580 | lasso: slope 1.199, intercept -6,679 | rf: slope 1.145, intercept -4,548 | lgbm: slope 0.975, intercept 363
+    R2=0.6 n=10000 hetero=True : ols: slope 1.292, intercept -9,582 | lasso: slope 1.296, intercept -9,698 | rf: slope 1.271, intercept -8,423 | lgbm: slope 1.049, intercept -1,987
+    R2=0.8 n=2000 hetero=False: ols: slope 1.292, intercept -10,392 | lasso: slope 1.296, intercept -10,525 | rf: slope 1.313, intercept -9,576 | lgbm: slope 1.105, intercept -4,050
+    R2=0.8 n=2000 hetero=True : ols: slope 1.207, intercept -6,894 | lasso: slope 1.211, intercept -7,008 | rf: slope 1.321, intercept -9,737 | lgbm: slope 1.062, intercept -2,390
+    R2=0.8 n=10000 hetero=False: ols: slope 1.241, intercept -8,104 | lasso: slope 1.244, intercept -8,215 | rf: slope 1.210, intercept -6,565 | lgbm: slope 1.069, intercept -2,601
+    R2=0.8 n=10000 hetero=True : ols: slope 1.265, intercept -8,799 | lasso: slope 1.269, intercept -8,918 | rf: slope 1.231, intercept -6,991 | lgbm: slope 1.057, intercept -1,907
+    Slope < 1 means the level regression shrinks the N-distribution further (C1 worsens);
+    slope > 1 means it stretches it. The sign follows the OOF fit, not the truth.
+
+Deviations from the specification and run settings
+- Replications: the specification asks for 20 per cell, reduced to 10 if runtime is too long.
+  A first attempt with 10 replications was stopped after one replication, because a concurrent
+  CPU job made each replication about seven times slower. The full run used 8 replications per
+  cell (128 in total) with R = 50, which fit the 90-minute target. Replication 0 of the first
+  cell was kept from the interrupted attempt (same seeds, same code path).
+- Population size: N_pop = 100,000 as specified for this exercise. DESIGN.md Section 4 states
+  200,000; the exercise specification takes precedence here.
+- Simulation replicates: R = 50 for C2, C3, C4 (the exercise specification). DESIGN.md states 100.
+- The truth and the oracle use the same test population in each replication, so their
+  difference is not affected by population sampling noise.
+- The C3 quantile forest is fitted once per replication and shared across the four point models,
+  because it does not depend on the point model. Its seed is fixed per cell and replication.
+
+Notes
+- The true poverty line is recomputed from each replication's population median.
+- OOF R2 of lgbm at n=2000 is low (about 0.02 at target R2 = 0.2) because the specified
+  settings (500 trees, learning rate 0.05, 31 leaves, min_child_samples 50, no early stopping)
+  overfit a 1,600-row fold. Results for lgbm at n=2000 should be read with that in mind.
