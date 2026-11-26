@@ -18,15 +18,15 @@ cd paper && pdflatex main && bibtex main && pdflatex main && pdflatex main
 
 ## Journal requirements checklist
 
-- [ ] Title concise and informative; running title set
-- [ ] Authors, affiliations (institution, city, country), corresponding author e-mail, ORCID
-- [ ] Abstract 150–250 words, no undefined abbreviations, no citations
-- [ ] 4–6 keywords
-- [ ] JEL codes
-- [ ] Headings: decimal numbering, at most three levels
+- [x] Title concise and informative; running title set
+- [x] Authors, affiliations (institution, city, country), corresponding author e-mail, ORCID
+- [x] Abstract 150–250 words, no undefined abbreviations, no citations
+- [x] 4–6 keywords
+- [x] JEL codes
+- [x] Headings: decimal numbering, at most three levels
 - [ ] Abbreviations defined at first use
 - [ ] Footnotes (not endnotes); no footnote consisting only of a citation
-- [ ] Citations by name and year: (Atkinson 1970); Becker and Seligman (1996)
+- [x] Citations by name and year: (Atkinson 1970); Becker and Seligman (1996)
 - [ ] Reference list alphabetical, only published/accepted works, full DOI links, ISO 4 journal abbreviations
 - [ ] Tables: Arabic numbering, caption above, footnotes with superscript lower-case letters or asterisks
 - [ ] Figures: `Fig1.eps` naming, Arabic numbering, no title inside the image, lettering 8–12 pt sans serif, patterns in addition to colours

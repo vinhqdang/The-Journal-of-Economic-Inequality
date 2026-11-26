@@ -44,7 +44,7 @@ Scheme & Model & Est. & Abs.\ Gini & SD & P90--P10 & share (pp) & low (\%) & $\r
 """ + "\n".join(rows) + r"""
 \botrule
 \end{tabular*}
-\footnotetext{Outcome: cluster mean of the asset-wealth index of \citet{yeh2020}, 19{,}669 DHS clusters. Features: histograms of Landsat bands and night lights. In-country: five spatial blocks within each country; out-of-country: leave one country out. Relative bias is averaged over country-years. MAE share: mean absolute error, in percentage points, of the share of clusters below the pooled 40th percentile. Share low: share of country-years in which the estimated absolute Gini is below the true one. $\rho$: Spearman correlation of estimated and true absolute Gini across country-years. C3 uses a quantile regression forest (QRF) and does not depend on the point model. Median out-of-fold """ + note + r""".}
+\footnotetext{Outcome: cluster mean of the asset-wealth index of \citet{yeh2020}, 19{,}669 DHS clusters. Features: histograms of Landsat bands and night lights. In-country: model pooled across countries, with five spatial blocks per country held out in turn; out-of-country: leave one country out. Relative bias is averaged over country-years. MAE share: mean absolute error, in percentage points, of the share of clusters below the pooled 40th percentile. Share low: share of country-years in which the estimated absolute Gini is below the true one. $\rho$: Spearman correlation of estimated and true absolute Gini across country-years. C3 uses a quantile regression forest (QRF) and does not depend on the point model. Median out-of-fold """ + note + r""".}
 \end{table}
 """
 (PAPER / "tab_sat.tex").write_text(tab)
