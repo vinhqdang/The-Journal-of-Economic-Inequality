@@ -38,6 +38,7 @@ import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.linear_model import Ridge
 from sklearn.metrics import r2_score
+from sklearn.preprocessing import FunctionTransformer
 from sklearn.neighbors import NearestNeighbors
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
@@ -51,6 +52,7 @@ BAND_NAMES = [f"lsat{c}" for c in range(7)] + ["ntl"]
 N_SPATIAL = 5
 RIDGE_ALPHA = 10.0
 ALPHA_SENSITIVITY = [1.0, 10.0, 100.0]
+CLIP_Z = 5.0  # clip standardised features; rare histogram bins otherwise produce extreme z-scores
 
 
 def fetch(name):
@@ -65,28 +67,31 @@ def fetch(name):
     return dest
 
 
-def ridge_pipeline(alpha):
-    return make_pipeline(StandardScaler(), Ridge(alpha=alpha))
+def ridge_pipeline(alpha, clip=CLIP_Z):
+    steps = [StandardScaler()]
+    if clip is not None:
+        steps.append(FunctionTransformer(lambda z: np.clip(z, -clip, clip)))
+    return make_pipeline(*steps, Ridge(alpha=alpha))
 
 
-def cv_spatial(X, y, folds, alpha):
+def cv_spatial(X, y, folds, alpha, clip=CLIP_Z):
     """Pooled out-of-fold predictions for spatial folds, plus per-fold R^2."""
     pred = np.empty_like(y)
     per_fold = []
     for k in np.unique(folds):
         tr, te = folds != k, folds == k
-        model = ridge_pipeline(alpha).fit(X[tr], y[tr])
+        model = ridge_pipeline(alpha, clip).fit(X[tr], y[tr])
         pred[te] = model.predict(X[te])
         per_fold.append(r2_score(y[te], pred[te]))
     return r2_score(y, pred), float(np.mean(per_fold)), per_fold
 
 
-def cv_country(X, y, countries, alpha):
+def cv_country(X, y, countries, alpha, clip=CLIP_Z):
     pred = np.empty_like(y)
     per_fold = []
     for c in np.unique(countries):
         tr, te = countries != c, countries == c
-        model = ridge_pipeline(alpha).fit(X[tr], y[tr])
+        model = ridge_pipeline(alpha, clip).fit(X[tr], y[tr])
         pred[te] = model.predict(X[te])
         per_fold.append(r2_score(y[te], pred[te]))
     return r2_score(y, pred), float(np.mean(per_fold))
@@ -200,6 +205,8 @@ def main():
     r2_sp, r2_sp_mean, r2_sp_folds = cv_spatial(X, y, folds_s, RIDGE_ALPHA)
     r2_c, r2_c_mean = cv_country(X, y, countries, RIDGE_ALPHA)
     sens = {a: cv_spatial(X, y, folds_s, a)[0] for a in ALPHA_SENSITIVITY}
+    r2_sp_noclip = cv_spatial(X, y, folds_s, RIDGE_ALPHA, clip=None)[0]
+    r2_c_noclip = cv_country(X, y, countries, RIDGE_ALPHA, clip=None)[0]
 
     L = []
     add = L.append
@@ -251,10 +258,12 @@ def main():
     add(f"  pooled sizes per fold_spatial: {np.bincount(folds_s, minlength=N_SPATIAL).tolist()}")
     add("")
     add("Sanity check: ridge regression of wealth on f_* (standardised within training folds)")
-    add(f"  alpha = {RIDGE_ALPHA} (fixed, not tuned)")
+    add(f"  alpha = {RIDGE_ALPHA} (fixed, not tuned); standardised features clipped to +/-{CLIP_Z:g}")
     add(f"  5-fold spatial CV (in-country blocks): pooled OOF R^2 = {r2_sp:.3f}; mean per-fold R^2 = {r2_sp_mean:.3f}")
     add(f"    per-fold R^2: {[round(v, 3) for v in r2_sp_folds]}")
     add(f"  leave-one-country-out (out-of-country, extra): pooled OOF R^2 = {r2_c:.3f}; mean per-country R^2 = {r2_c_mean:.3f}")
+    add(f"  without clipping: spatial pooled R^2 = {r2_sp_noclip:.3f}; leave-one-country-out pooled R^2 = {r2_c_noclip:.3f}")
+    add("    (rare histogram bins are nearly constant in training and give extreme test z-scores)")
     add("  spatial CV pooled R^2 sensitivity to alpha (reported only, not used for selection):")
     for a, v in sens.items():
         add(f"    alpha={a:g}: {v:.3f}")
