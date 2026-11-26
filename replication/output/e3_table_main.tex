@@ -1,0 +1,22 @@
+% E3 main table rows (booktabs). Columns:
+% scheme & model & estimator & rel. bias abs.\ Gini (%) & rel. bias SD (%) & rel. bias P90--P10 (%) & MAE share below 40th pct (pp) & Spearman rho (abs.\ Gini) \\
+% C3 uses a quantile regression forest fitted per fold; it does not depend on the point model, so it is labelled QRF.
+In-country & Ridge & N & -17.4 & -14.3 & -13.1 & 13.49 & 0.778 \\
+In-country & Ridge & C1 & -19.6 & -16.6 & -15.3 & 14.85 & 0.780 \\
+In-country & Ridge & C2 & 16.1 & 11.8 & 11.8 & 12.80 & 0.765 \\
+In-country & Ridge & C4 & 14.0 & 10.9 & 12.9 & 12.36 & 0.817 \\
+In-country & LightGBM & N & -10.6 & -9.9 & -7.3 & 7.44 & 0.808 \\
+In-country & LightGBM & C1 & -11.9 & -11.2 & -8.7 & 7.45 & 0.812 \\
+In-country & LightGBM & C2 & 14.6 & 9.8 & 11.1 & 9.24 & 0.749 \\
+In-country & LightGBM & C4 & 11.1 & 8.9 & 10.5 & 8.07 & 0.808 \\
+In-country & QRF & C3 & 10.2 & 8.1 & 10.3 & 8.41 & 0.834 \\
+\midrule
+Out-of-country & Ridge & N & -18.3 & -15.3 & -13.9 & 18.98 & 0.763 \\
+Out-of-country & Ridge & C1 & -23.6 & -20.8 & -19.5 & 21.63 & 0.746 \\
+Out-of-country & Ridge & C2 & 19.6 & 14.7 & 14.7 & 17.11 & 0.701 \\
+Out-of-country & Ridge & C4 & 15.4 & 11.6 & 14.0 & 17.46 & 0.705 \\
+Out-of-country & LightGBM & N & -11.3 & -10.8 & -8.2 & 11.96 & 0.671 \\
+Out-of-country & LightGBM & C1 & -13.7 & -13.2 & -10.7 & 13.14 & 0.638 \\
+Out-of-country & LightGBM & C2 & 18.1 & 12.8 & 13.9 & 13.31 & 0.584 \\
+Out-of-country & LightGBM & C4 & 14.0 & 10.9 & 13.1 & 13.44 & 0.583 \\
+Out-of-country & QRF & C3 & 12.3 & 9.3 & 11.9 & 12.15 & 0.703 \\

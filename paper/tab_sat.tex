@@ -1,0 +1,32 @@
+\begin{table}[ht]
+\caption{Between-cluster inequality of predicted wealth in 43 African country-years}\label{tab:sat}%
+\setlength{\tabcolsep}{4pt}%
+\begin{tabular*}{\textwidth}{@{\extracolsep\fill}lllrrrrrr@{}}
+\toprule
+ & & & \multicolumn{3}{c}{Relative bias (\%)} & MAE & Share & \\
+\cmidrule{4-6}
+Scheme & Model & Est. & Abs.\ Gini & SD & P90--P10 & share (pp) & low (\%) & $\rho$\\
+\midrule
+In-country & Ridge & N & $-$17.4 & $-$14.3 & $-$13.1 & 13.5 & 91 & 0.78 \\
+ &  & C1 & $-$19.6 & $-$16.6 & $-$15.3 & 14.8 & 100 & 0.78 \\
+ &  & C2 & 16.1 & 11.8 & 11.8 & 12.8 & 19 & 0.77 \\
+ &  & C4 & 14.0 & 10.9 & 12.9 & 12.4 & 23 & 0.82 \\
+ & Boosting & N & $-$10.6 & $-$9.9 & $-$7.3 & 7.4 & 88 & 0.81 \\
+ &  & C1 & $-$11.9 & $-$11.2 & $-$8.7 & 7.4 & 88 & 0.81 \\
+ &  & C2 & 14.6 & 9.8 & 11.1 & 9.2 & 23 & 0.75 \\
+ &  & C4 & 11.1 & 8.9 & 10.5 & 8.1 & 21 & 0.81 \\
+ & QRF & C3 & 10.2 & 8.1 & 10.3 & 8.4 & 16 & 0.83 \\
+\midrule
+Out-of-country & Ridge & N & $-$18.3 & $-$15.3 & $-$13.9 & 19.0 & 95 & 0.76 \\
+ &  & C1 & $-$23.6 & $-$20.8 & $-$19.5 & 21.6 & 100 & 0.75 \\
+ &  & C2 & 19.6 & 14.7 & 14.7 & 17.1 & 16 & 0.70 \\
+ &  & C4 & 15.4 & 11.6 & 14.0 & 17.5 & 23 & 0.71 \\
+ & Boosting & N & $-$11.3 & $-$10.8 & $-$8.2 & 12.0 & 84 & 0.67 \\
+ &  & C1 & $-$13.7 & $-$13.2 & $-$10.7 & 13.1 & 84 & 0.64 \\
+ &  & C2 & 18.1 & 12.8 & 13.9 & 13.3 & 16 & 0.58 \\
+ &  & C4 & 14.0 & 10.9 & 13.1 & 13.4 & 26 & 0.58 \\
+ & QRF & C3 & 12.3 & 9.3 & 11.9 & 12.1 & 21 & 0.70 \\
+\botrule
+\end{tabular*}
+\footnotetext{Outcome: cluster mean of the asset-wealth index of \citet{yeh2020}, 19{,}669 DHS clusters. Features: histograms of Landsat bands and night lights. In-country: five spatial blocks within each country; out-of-country: leave one country out. Relative bias is averaged over country-years. MAE share: mean absolute error, in percentage points, of the share of clusters below the pooled 40th percentile. Share low: share of country-years in which the estimated absolute Gini is below the true one. $\rho$: Spearman correlation of estimated and true absolute Gini across country-years. C3 uses a quantile regression forest (QRF) and does not depend on the point model. Median out-of-fold in-country: $R^2$ 0.59 (ridge), 0.64 (boosting); out-of-country: $R^2$ 0.51 (ridge), 0.59 (boosting).}
+\end{table}
