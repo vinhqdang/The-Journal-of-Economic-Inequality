@@ -63,15 +63,15 @@ We test the theory and the corrections on two real datasets and on simulated dat
 
 The bias is large in practice. In the ACS, plug-in maps built from household covariates understate the national Gini by 21\% and the poverty headcount by 33\%. Maps built from area-level features, the analogue of satellite data, understate them by 63\% and almost 100\%, and show no inequality at all within areas; mapped, they paint a country of uniformly equal places. In the African satellite maps, between-cluster inequality is understated by 11--18\% in most country-years. A residual bootstrap within bins of the prediction removes almost all of the bias in national ACS estimates, and in the Gini, the mean log deviation and the FGT measures in the simulations, where linear recalibration at best moves the estimates to the oracle conditional mean and with a noisy learner makes them worse. Two limits remain. Corrections overshoot when residuals are pooled across heterogeneous areas or countries. And no correction recovers the ranking of areas by inequality when the features do not predict within-area dispersion.
 
-The rest of the paper is organised as follows. Section~\ref{sec:lit} positions the paper relative to three literatures that work with the same object. Section~\ref{sec:theory} presents the theoretical results. Section~\ref{sec:design} describes the estimators, the two real datasets and the simulation design. Section~\ref{sec:results} reports the results for the ACS, the African satellite maps and the simulations, and Section~\ref{sec:conclusion} concludes.
+The rest of the paper is organised as follows. Section~\ref{sec:lit} reviews related work. Section~\ref{sec:theory} presents the theoretical results. Section~\ref{sec:design} describes the estimators and the data. Section~\ref{sec:results} reports the results for the ACS, the African satellite maps and the simulations, and Section~\ref{sec:conclusion} concludes.
 
 %% ======================================================================
-\section{Positioning: one object, three literatures}\label{sec:lit}
+\section{Related work}\label{sec:lit}
 
 Three literatures compute statistics on the same object, the distribution of a conditional mean $\E[Y\mid X]$, but they treat the dispersion of $Y$ around it in three different ways (Table~\ref{tab:position}). Small area estimation treats it as part of the target and simulates it. Machine-learning poverty mapping ignores it. Ex-ante inequality of opportunity excludes it on purpose. The contribution of this paper is to place machine-learning poverty maps in this picture: we show what their distribution measures, how far it is from the target, and what it takes to close the gap.
 
 \begin{table}[ht]
-\caption{How three literatures treat the conditional mean and the dispersion around it}\label{tab:position}%
+\caption{Comparison with related literature}\label{tab:position}%
 \small
 \begin{tabular*}{\textwidth}{@{\extracolsep\fill}>{\raggedright\arraybackslash}p{0.16\textwidth}>{\raggedright\arraybackslash}p{0.19\textwidth}>{\raggedright\arraybackslash}p{0.18\textwidth}>{\raggedright\arraybackslash}p{0.17\textwidth}>{\raggedright\arraybackslash}p{0.15\textwidth}@{}}
 \toprule
@@ -87,16 +87,16 @@ This paper & Predictions and simulated welfare & Bias characterised and correcte
 \footnotetext{Representative work: small area estimation, \citet{ell2003}, \citet{tarozzi2009}, \citet{molina2010}; machine-learning poverty maps, \citet{jean2016}, \citet{yeh2020}, \citet{chi2022}, \citet{pradhan2025}; ex-ante inequality of opportunity, \citet{ferreira2011}, \citet{brunori2023}.}
 \end{table}
 
-\paragraph{What small area estimation knew, and what it leaves open.}
+\subsection{Small area estimation}\label{sec:lit_sae}
 Poverty mapping in the tradition of \citet{ell2003} combines a survey, in which welfare is observed, with a census, in which only predictors are observed. It fits a model of log consumption in the survey and simulates welfare for every census household by drawing a location effect and a household error. Indices are computed on each simulated census and averaged. The debate that followed concerns how to model the errors: \citet{tarozzi2009} show that the method's standard errors can be badly understated when the model does not hold within small areas, and \citet{molina2010} propose the empirical best predictor under a nested error model. Throughout, it is taken for granted that indices must be computed on simulated welfare, not on predicted means. What this literature does not provide is a general statement of what is lost when the simulation step is skipped, for which indices, and by how much. It also predates feature sets that describe places rather than households, for which the dispersion within an area is not predicted at all. Propositions~\ref{prop:lorenz}--\ref{prop:shrink} supply the first, and the area-context exercises in Sections~\ref{sec:acs} and~\ref{sec:sat} address the second.
 
-\paragraph{What machine-learning poverty maps changed.}
+\subsection{Machine-learning poverty maps}\label{sec:lit_ml}
 Machine-learning poverty maps changed both the predictors and the output. Features extracted from satellite imagery or mobile phone records \citep{jean2016,blumenstock2015,yeh2020,chi2022} are available everywhere, and the published product is a point prediction for each location. Evaluation focuses on how well predictions track survey values, measured by correlations or $R^2$; the best models reach an $R^2$ between 0.5 and 0.75 for asset indices and less for consumption. Work on the reliability of these maps asks whether their errors are systematic: \citet{aiken2023} document urban--rural differences in accuracy, and \citet{corral2025} document substantial bias in area poverty rates against a census benchmark. Predictions are also used as outcomes in impact evaluations \citep{ratledge2022}, where shrinkage towards the mean attenuates estimated effects, and as inputs to inequality maps \citep{pradhan2025}. Our question is different from accuracy. We ask what the distribution of predictions measures. Proposition~\ref{prop:decomp} gives a precise answer: the share of the variance of log welfare that a map reproduces is its $R^2$, so a map that is accurate by current standards can still omit a large part of inequality. Accuracy and distributional validity are separate properties, and the second has not been evaluated.
 
-\paragraph{What inequality of opportunity offers.}
+\subsection{Inequality of opportunity}\label{sec:lit_iop}
 The ex-ante approach to inequality of opportunity \citep{roemer1998,ferreira2011} computes inequality on the conditional mean of an outcome given circumstances, and \citet{brunori2023} estimate that conditional mean with trees and forests. Within-type dispersion is excluded on purpose, because it is not attributable to circumstances. In the population, inequality computed on observed circumstances is a lower bound for the contribution of all circumstances, because the observed set is incomplete; in finite samples, estimation error can push the estimate either way. Poverty maps compute the same object with geography and satellite features in the role of circumstances, but within-cell dispersion is part of their target. This gives the inequality of a poverty map a precise interpretation, as inequality of opportunity with respect to the map's features (Corollary~\ref{cor:iop}), and explains why it cannot be read as an estimate of inequality.
 
-\paragraph{Position of this paper.}
+\subsection{Position of our paper}\label{sec:lit_position}
 The paper sits where the three literatures meet. It brings the principle of small area estimation, that inequality must be computed on simulated rather than predicted welfare, to machine-learning poverty maps. It grounds the principle in general results that use the Lorenz order and the decomposition behind inequality of opportunity. And it measures the consequences on real data where the truth is known. We do not propose a new prediction model, and we do not study targeting; our object is the distribution that a map implies.
 
 %% ======================================================================
@@ -173,7 +173,7 @@ The Gini coefficient is half the mean absolute difference divided by the mean. S
 Proposition~\ref{prop:shrink} describes the best case for recalibration. In practice the prediction error of a machine-learning model is not pure shrinkage. When $\hat m=m+\eta$ with estimation noise $\eta$, the projection slope is below one, and the mean-squared-error-optimal recalibration contracts the predictions further. The simulation evidence in Section~\ref{sec:mc} shows that this can make linear recalibration worse than doing nothing.
 
 %% ======================================================================
-\section{Estimators, data and evaluation design}\label{sec:design}
+\section{Data and methods}\label{sec:design}
 
 \subsection{Estimators}\label{sec:estimators}
 
@@ -189,12 +189,12 @@ The target of a poverty map that reports inequality is $I(F_Y)$, where $F_Y(y)=\
 
 When the outcome is an asset index that takes negative values (Section~\ref{sec:data_sat}), the same estimators are applied in levels with additive residuals, and inequality is measured with translation-invariant indices: the absolute Gini (half the mean absolute difference), the standard deviation, the 90--10 percentile range, and the share of units below a fixed cut-off. For the absolute Gini and the standard deviation, Proposition~\ref{prop:lorenz} holds with the Lorenz order replaced by the convex order, because both are Schur-convex and translation invariant, and the absolute Gini satisfies the scaling result of Proposition~\ref{prop:shrink} without the requirement that $\hat m>0$. The percentile range and the share below a cut-off are not monotone in the convex order, and for them the direction of the bias is an empirical question.
 
-\subsection{Two real datasets and a simulation}\label{sec:data_overview}
+\subsection{Overview of the data}\label{sec:data_overview}
 
 We evaluate the estimators on three sources of evidence, two of which are real data (Table~\ref{tab:data}). The ACS lets us compare estimates with the true inequality of every area in a real income distribution. The African satellite maps let us do the same for a published, widely used poverty map built from imagery. Simulated data play a supporting role: they are the only setting in which the conditional mean $m(X)$ itself is known, so they are used to verify Propositions~\ref{prop:lorenz}--\ref{prop:shrink} and to separate the effect of using a conditional mean from the effect of estimating it.
 
 \begin{table}[ht]
-\caption{Three sources of evidence}\label{tab:data}%
+\caption{Data sources}\label{tab:data}%
 \small
 \begin{tabular*}{\textwidth}{@{\extracolsep\fill}>{\raggedright\arraybackslash}p{0.13\textwidth}>{\raggedright\arraybackslash}p{0.25\textwidth}>{\raggedright\arraybackslash}p{0.25\textwidth}>{\raggedright\arraybackslash}p{0.25\textwidth}@{}}
 \toprule
@@ -211,7 +211,7 @@ Role & Accuracy where maps are made from surveys and censuses & Accuracy of a pu
 \footnotetext{ACS: American Community Survey 2023 one-year Public Use Microdata Sample; PUMA: Public Use Microdata Area. DHS: Demographic and Health Surveys, as processed by \citet{yeh2020}.}
 \end{table}
 
-\subsection{Real data I: the American Community Survey as a pseudo-census}\label{sec:data_acs}
+\subsection{American Community Survey}\label{sec:data_acs}
 
 The first real dataset is the 2023 one-year American Community Survey (ACS) Public Use Microdata Sample as a pseudo-census. In this setting the truth is known in every area. The population is the 1{,}326{,}716 occupied housing units with positive household income in the 50 states and the District of Columbia. Welfare is household income adjusted to 2023 dollars, and all indices use the household weights. The national Gini is 0.474. The poverty line is fixed at 60\% of the weighted national median (USD 47{,}713). The small areas are the 2{,}462 Public Use Microdata Areas (PUMAs), each with at least 100{,}000 residents.
 
@@ -225,7 +225,7 @@ We use two sets of predictors.
 
 The out-of-fold $R^2$ of log income is 0.50 with unit-level predictors and 0.04 with area-context predictors. We report results for gradient boosting with ten replications and $R=10$ simulation draws. The quantile forest uses 19 quantile levels, from 0.05 to 0.95, to keep computation feasible for a million target households. Results for OLS are reported in the replication package. The plug-in and simulation results are similar, but OLS has a calibration slope of 0.64, so C1 does even worse (national Gini bias $-44\%$).
 
-\subsection{Real data II: satellite poverty maps in Africa}\label{sec:data_sat}
+\subsection{Satellite poverty maps}\label{sec:data_sat}
 
 The second real dataset is a widely used satellite poverty map. \citet{yeh2020} predict the cluster mean of an asset-wealth index for 19{,}669 clusters of the Demographic and Health Surveys (DHS) in 23 African countries, observed between 2009 and 2016. The predictors are publicly available Landsat imagery and night lights. We use their public replication data: the wealth index of each cluster, and per-cluster histograms of the Landsat bands and night lights, which give 636 features. We do not use their convolutional network; our ridge and gradient boosting models reach out-of-fold $R^2$ values of 0.5 to 0.65 within country-years. These are in the range reported for this type of model.
 
@@ -272,7 +272,7 @@ Point corrections do not deliver valid inference by themselves. In five of the t
 
 \input{tab_acs}
 
-\subsection{Satellite poverty maps in Africa}\label{sec:sat}
+\subsection{Satellite poverty maps}\label{sec:sat}
 
 Figure~\ref{fig:satmap} shows the data and the geography of the bias. Panel (a) plots the survey wealth of the 19{,}669 DHS clusters. Panel (b) shows, for each country, the relative bias of the plug-in absolute Gini, averaged over survey years, for gradient boosting with in-country validation. The plug-in map understates between-cluster inequality in 20 of the 23 countries. The understatement exceeds 20\% in Angola, Nigeria, Kenya and Zimbabwe, and only the Democratic Republic of the Congo, Mali and Malawi show small overstatements, of 3 to 7\%.
 
@@ -294,7 +294,7 @@ Unlike in the national ACS estimates, the corrections here overshoot. C2, C3 and
 
 \input{tab_sat}
 
-\subsection{Simulation evidence on the mechanisms}\label{sec:mc}\label{sec:mc_results}
+\subsection{Simulated data}\label{sec:mc}\label{sec:mc_results}
 
 Simulated data complement the two real datasets in one respect: the conditional mean $m(X)$ is known, so the bias of a perfect map (the oracle) can be separated from the bias due to estimation. The simulations confirm the propositions. In all 128 cell-replications the oracle index is below the true index for the Gini, MLD, Theil, Atkinson(1), FGT1 and FGT2. The gap between the true MLD and the oracle MLD equals the average within-cell MLD to within sampling error (0.1602 against 0.1600 on average), as Eq.~(\ref{eq:mld}) requires. In the lognormal benchmark the closed forms in Eq.~(\ref{eq:lognormal}) match Monte Carlo values to within 0.001.
 
